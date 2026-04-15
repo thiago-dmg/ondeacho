@@ -18,6 +18,11 @@ import { InsuranceEntity } from "./catalog/entities/insurance.entity";
 import { ProfessionalEntity } from "./professionals/entities/professional.entity";
 import { FavoriteEntity } from "./favorites/entities/favorite.entity";
 import { ContactEntity } from "./contacts/entities/contact.entity";
+import { CollaborationModule } from "./collaboration/collaboration.module";
+import { ClinicSuggestionEntity } from "./collaboration/entities/clinic-suggestion.entity";
+import { ProfileClaimRequestEntity } from "./collaboration/entities/profile-claim-request.entity";
+import { ProfileOwnerEntity } from "./collaboration/entities/profile-owner.entity";
+import { StatusHistoryEntity } from "./collaboration/entities/status-history.entity";
 
 @Module({
   imports: [
@@ -37,7 +42,11 @@ import { ContactEntity } from "./contacts/entities/contact.entity";
         InsuranceEntity,
         ProfessionalEntity,
         FavoriteEntity,
-        ContactEntity
+        ContactEntity,
+        ClinicSuggestionEntity,
+        ProfileClaimRequestEntity,
+        ProfileOwnerEntity,
+        StatusHistoryEntity
       ],
       synchronize: false
     }),
@@ -49,7 +58,8 @@ import { ContactEntity } from "./contacts/entities/contact.entity";
     FavoritesModule,
     ContactsModule,
     ProfessionalsModule,
-    HealthModule
+    HealthModule,
+    CollaborationModule
   ]
 })
 export class AppModule {}

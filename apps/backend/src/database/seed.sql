@@ -27,13 +27,31 @@ VALUES
 ON CONFLICT (slug) DO NOTHING;
 
 -- Clínicas
-INSERT INTO clinics (name, description, city, neighborhood, accepts_online, supports_tea_tdh, rating)
+INSERT INTO clinics (
+  name,
+  description,
+  city,
+  neighborhood,
+  address_line,
+  address_number,
+  zipcode,
+  phone,
+  whatsapp_phone,
+  accepts_online,
+  supports_tea_tdh,
+  rating
+)
 VALUES
   (
     'Clínica Horizonte Azul',
     'Atendimento multidisciplinar com foco em desenvolvimento infantil para TEA e TDAH.',
     'São Paulo',
     'Moema',
+    'Avenida Ibirapuera',
+    '1254',
+    '04028-001',
+    '(11) 3500-1000',
+    '(11) 99888-7766',
     true,
     true,
     4.8
@@ -43,11 +61,34 @@ VALUES
     'Equipe especializada em intervenção precoce e suporte familiar.',
     'Campinas',
     'Cambuí',
+    'Rua Coronel Quirino',
+    '845',
+    '13025-002',
+    '(19) 3305-4545',
+    '(19) 99123-4567',
     true,
     true,
     4.6
   )
 ON CONFLICT DO NOTHING;
+
+UPDATE clinics
+SET
+  address_line = 'Avenida Ibirapuera',
+  address_number = '1254',
+  zipcode = '04028-001',
+  phone = '(11) 3500-1000',
+  whatsapp_phone = '(11) 99888-7766'
+WHERE name = 'Clínica Horizonte Azul';
+
+UPDATE clinics
+SET
+  address_line = 'Rua Coronel Quirino',
+  address_number = '845',
+  zipcode = '13025-002',
+  phone = '(19) 3305-4545',
+  whatsapp_phone = '(19) 99123-4567'
+WHERE name = 'Espaço Integrar Kids';
 
 -- Profissionais
 INSERT INTO professionals (name, city, neighborhood, accepts_online, supports_tea_tdh, rating)

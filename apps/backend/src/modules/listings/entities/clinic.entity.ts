@@ -27,6 +27,30 @@ export class ClinicEntity {
   @Column({ type: "varchar", length: 120, nullable: true })
   neighborhood!: string | null;
 
+  @Column({ name: "address_line", type: "varchar", length: 200, nullable: true })
+  addressLine!: string | null;
+
+  @Column({ name: "address_number", type: "varchar", length: 20, nullable: true })
+  addressNumber!: string | null;
+
+  @Column({ type: "varchar", length: 10, nullable: true })
+  zipcode!: string | null;
+
+  @Column({ type: "varchar", length: 20, nullable: true })
+  phone!: string | null;
+
+  @Column({ name: "whatsapp_phone", type: "varchar", length: 20, nullable: true })
+  whatsappPhone!: string | null;
+
+  @Column({ name: "added_by_community", type: "boolean", default: false })
+  addedByCommunity!: boolean;
+
+  @Column({ name: "is_claimed", type: "boolean", default: false })
+  isClaimed!: boolean;
+
+  @Column({ name: "is_verified", type: "boolean", default: false })
+  isVerified!: boolean;
+
   @Column({ name: "accepts_online", type: "boolean", default: false })
   acceptsOnline!: boolean;
 

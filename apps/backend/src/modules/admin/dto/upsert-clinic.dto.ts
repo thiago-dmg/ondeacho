@@ -21,6 +21,31 @@ export class UpsertClinicDto {
   @ApiProperty({ required: false })
   @IsOptional()
   @IsString()
+  addressLine?: string;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
+  addressNumber?: string;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
+  zipcode?: string;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
+  phone?: string;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
+  whatsappPhone?: string;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
   description?: string;
 
   @ApiProperty({ required: false, minimum: 0, maximum: 5 })

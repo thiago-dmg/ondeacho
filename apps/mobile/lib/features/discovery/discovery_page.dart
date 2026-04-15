@@ -22,6 +22,10 @@ class DiscoveryPage extends ConsumerWidget {
         title: const Text("Buscar atendimentos"),
         actions: [
           IconButton(
+            onPressed: () => context.push("/suggest"),
+            icon: const Icon(Icons.add_business_outlined)
+          ),
+          IconButton(
             onPressed: () {
               if (isLoggedIn) {
                 context.push("/favorites");
@@ -115,6 +119,53 @@ class DiscoveryPage extends ConsumerWidget {
                   ),
                   error: (error, stack) => Text("Erro ao carregar clínicas: $error")
                 ),
+                if ((clinicsAsync.asData?.value.isEmpty ?? false) &&
+                    (professionalsAsync.asData?.value.isEmpty ?? false)) ...[
+                  const SizedBox(height: 12),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.black12)
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text("Não encontramos atendimentos nessa busca."),
+                        const SizedBox(height: 10),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: [
+                            OutlinedButton(
+                              onPressed: () => context.push("/suggest"),
+                              child: const Text("Sugerir clínica")
+                            ),
+                            OutlinedButton(
+                              onPressed: () {
+                                ref.read(selectedInsuranceIdProvider.notifier).set(null);
+                                ref.read(selectedSpecialtyIdProvider.notifier).set(null);
+                              },
+                              child: const Text("Ampliar raio de busca")
+                            ),
+                            OutlinedButton(
+                              onPressed: () {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text("Dica: habilite o filtro de atendimento online no próximo passo.")
+                                  )
+                                );
+                              },
+                              child: const Text("Ver atendimentos online")
+                            )
+                          ]
+                        )
+                      ]
+                    )
+                  )
+                ],
                 const SizedBox(height: 12),
                 Text("Profissionais", style: Theme.of(context).textTheme.titleMedium),
                 const SizedBox(height: 8),
@@ -141,6 +192,15 @@ class DiscoveryPage extends ConsumerWidget {
                     child: Center(child: CircularProgressIndicator())
                   ),
                   error: (error, stack) => Text("Erro ao carregar profissionais: $error")
+                ),
+                const SizedBox(height: 12),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: TextButton.icon(
+                    onPressed: () => context.push("/suggest"),
+                    icon: const Icon(Icons.lightbulb_outline),
+                    label: const Text("Não encontrou? Sugerir")
+                  )
                 )
               ]
             )

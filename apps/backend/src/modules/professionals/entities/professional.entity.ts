@@ -30,6 +30,21 @@ export class ProfessionalEntity {
   @Column({ type: "varchar", length: 120, nullable: true })
   neighborhood!: string | null;
 
+  @Column({ name: "phone", type: "varchar", length: 20, nullable: true })
+  phone!: string | null;
+
+  @Column({ name: "whatsapp_phone", type: "varchar", length: 20, nullable: true })
+  whatsappPhone!: string | null;
+
+  @Column({ name: "added_by_community", type: "boolean", default: false })
+  addedByCommunity!: boolean;
+
+  @Column({ name: "is_claimed", type: "boolean", default: false })
+  isClaimed!: boolean;
+
+  @Column({ name: "is_verified", type: "boolean", default: false })
+  isVerified!: boolean;
+
   @Column({ name: "accepts_online", type: "boolean", default: false })
   acceptsOnline!: boolean;
 

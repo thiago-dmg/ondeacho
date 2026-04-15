@@ -50,6 +50,12 @@ export default function DashboardPage() {
       <p>
         <Link href="/reviews">Moderar avaliações</Link>
       </p>
+      <p>
+        <Link href="/clinic-suggestions">Moderar sugestões da comunidade</Link>
+      </p>
+      <p>
+        <Link href="/profile-claims">Moderar reivindicações de perfil</Link>
+      </p>
       <div style={{ display: "flex", gap: 12 }}>
         {metrics.map((metric) => (
           <div

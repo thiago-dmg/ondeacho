@@ -20,6 +20,14 @@ import { AdminProfessionalsController } from "./controllers/admin-professionals.
 import { AdminReviewsController } from "./controllers/admin-reviews.controller";
 import { AdminMetricsController } from "./controllers/admin-metrics.controller";
 import { AdminMetricsService } from "./services/admin-metrics.service";
+import { ClinicSuggestionEntity } from "../collaboration/entities/clinic-suggestion.entity";
+import { ProfileClaimRequestEntity } from "../collaboration/entities/profile-claim-request.entity";
+import { ProfileOwnerEntity } from "../collaboration/entities/profile-owner.entity";
+import { StatusHistoryEntity } from "../collaboration/entities/status-history.entity";
+import { AdminClinicSuggestionsController } from "./controllers/admin-clinic-suggestions.controller";
+import { AdminProfileClaimsController } from "./controllers/admin-profile-claims.controller";
+import { AdminClinicSuggestionsService } from "./services/admin-clinic-suggestions.service";
+import { AdminProfileClaimsService } from "./services/admin-profile-claims.service";
 
 @Module({
   imports: [
@@ -31,7 +39,11 @@ import { AdminMetricsService } from "./services/admin-metrics.service";
       ReviewEntity,
       UserEntity,
       FavoriteEntity,
-      ContactEntity
+      ContactEntity,
+      ClinicSuggestionEntity,
+      ProfileClaimRequestEntity,
+      ProfileOwnerEntity,
+      StatusHistoryEntity
     ])
   ],
   controllers: [
@@ -40,7 +52,9 @@ import { AdminMetricsService } from "./services/admin-metrics.service";
     AdminInsurancesController,
     AdminProfessionalsController,
     AdminReviewsController,
-    AdminMetricsController
+    AdminMetricsController,
+    AdminClinicSuggestionsController,
+    AdminProfileClaimsController
   ],
   providers: [
     AdminClinicsService,
@@ -48,7 +62,9 @@ import { AdminMetricsService } from "./services/admin-metrics.service";
     AdminInsurancesService,
     AdminProfessionalsService,
     AdminReviewsService,
-    AdminMetricsService
+    AdminMetricsService,
+    AdminClinicSuggestionsService,
+    AdminProfileClaimsService
   ]
 })
 export class AdminModule {}

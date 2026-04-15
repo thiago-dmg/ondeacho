@@ -36,6 +36,11 @@ export class AdminClinicsService {
       ...dto,
       description: dto.description ?? null,
       neighborhood: dto.neighborhood ?? null,
+      addressLine: dto.addressLine ?? null,
+      addressNumber: dto.addressNumber ?? null,
+      zipcode: dto.zipcode ?? null,
+      phone: dto.phone ?? null,
+      whatsappPhone: dto.whatsappPhone ?? null,
       rating: dto.rating ?? 0,
       acceptsOnline: dto.acceptsOnline ?? false,
       supportsTeaTdh: dto.supportsTeaTdh ?? true,
@@ -57,7 +62,12 @@ export class AdminClinicsService {
     Object.assign(clinic, {
       ...dto,
       description: dto.description ?? clinic.description,
-      neighborhood: dto.neighborhood ?? clinic.neighborhood
+      neighborhood: dto.neighborhood ?? clinic.neighborhood,
+      addressLine: dto.addressLine ?? clinic.addressLine,
+      addressNumber: dto.addressNumber ?? clinic.addressNumber,
+      zipcode: dto.zipcode ?? clinic.zipcode,
+      phone: dto.phone ?? clinic.phone,
+      whatsappPhone: dto.whatsappPhone ?? clinic.whatsappPhone
     });
 
     if (dto.specialtyIds) {
