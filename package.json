@@ -1,0 +1,30 @@
+{
+  "name": "ondeacho",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "dev:backend": "npm --workspace apps/backend run start:dev",
+    "dev:admin": "npm --workspace apps/admin run dev",
+    "lint:backend": "npm --workspace apps/backend run lint",
+    "lint:admin": "npm --workspace apps/admin run lint",
+    "docker:up": "docker compose up -d",
+    "docker:down": "docker compose down",
+    "docker:up:prod": "docker compose -f docker-compose.prod.yml up -d --build",
+    "docker:down:prod": "docker compose -f docker-compose.prod.yml down",
+    "db:migrate": "npm --workspace apps/backend run db:migrate",
+    "db:seed": "npm --workspace apps/backend run db:seed"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "private": true,
+  "workspaces": [
+    "apps/backend",
+    "apps/admin"
+  ]
+}

@@ -1,0 +1,26 @@
+{
+  "name": "admin",
+  "version": "1.0.0",
+  "description": "Painel administrativo planejado em Next.js.",
+  "private": true,
+  "scripts": {
+    "dev": "next dev -p 3001",
+    "build": "next build",
+    "start": "next start -p 3001",
+    "lint": "tsc --noEmit"
+  },
+  "keywords": [],
+  "author": "OndeAcho",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^20.17.30",
+    "@types/react": "^18.2.79",
+    "@types/react-dom": "^18.2.25",
+    "typescript": "^5.4.5"
+  },
+  "dependencies": {
+    "next": "^13.5.11",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
+  }
+}

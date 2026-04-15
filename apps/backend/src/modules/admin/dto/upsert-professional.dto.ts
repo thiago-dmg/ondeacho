@@ -1,0 +1,55 @@
+import { ApiProperty } from "@nestjs/swagger";
+import { Type } from "class-transformer";
+import { IsArray, IsBoolean, IsNotEmpty, IsOptional, IsString, IsUUID, Max, Min } from "class-validator";
+
+export class UpsertProfessionalDto {
+  @ApiProperty()
+  @IsString()
+  @IsNotEmpty()
+  name!: string;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
+  clinicId?: string;
+
+  @ApiProperty()
+  @IsString()
+  @IsNotEmpty()
+  city!: string;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
+  neighborhood?: string;
+
+  @ApiProperty({ required: false, default: false })
+  @IsOptional()
+  @IsBoolean()
+  acceptsOnline?: boolean;
+
+  @ApiProperty({ required: false, default: true })
+  @IsOptional()
+  @IsBoolean()
+  supportsTeaTdh?: boolean;
+
+  @ApiProperty({ required: false, minimum: 0, maximum: 5 })
+  @IsOptional()
+  @Min(0)
+  @Max(5)
+  rating?: number;
+
+  @ApiProperty({ required: false, type: [String] })
+  @IsOptional()
+  @IsArray()
+  @Type(() => String)
+  @IsUUID("4", { each: true })
+  specialtyIds?: string[];
+
+  @ApiProperty({ required: false, type: [String] })
+  @IsOptional()
+  @IsArray()
+  @Type(() => String)
+  @IsUUID("4", { each: true })
+  insuranceIds?: string[];
+}
