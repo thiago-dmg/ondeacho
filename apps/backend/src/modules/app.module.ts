@@ -48,7 +48,7 @@ import { StatusHistoryEntity } from "./collaboration/entities/status-history.ent
         ProfileOwnerEntity,
         StatusHistoryEntity
       ],
-      synchronize: false
+      synchronize: true
     }),
     AuthModule,
     ListingsModule,
