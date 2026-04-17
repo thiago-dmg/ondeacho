@@ -1,11 +1,11 @@
-import { BadRequestException, Injectable, UnauthorizedException } from "@nestjs/common";
+import { BadRequestException, Injectable, NotFoundException, UnauthorizedException } from "@nestjs/common";
 import { JwtService } from "@nestjs/jwt";
 import { InjectRepository } from "@nestjs/typeorm";
 import { compareSync, hashSync } from "bcryptjs";
 import { Repository } from "typeorm";
 import { Role } from "../../common/enums/role.enum";
 import { UserEntity } from "../users/entities/user.entity";
-import { LoginDto, RegisterDto } from "./dto/auth.dto";
+import { LoginDto, RegisterDto, UpdateProfileDto } from "./dto/auth.dto";
 
 @Injectable()
 export class AuthService {
@@ -26,7 +26,7 @@ export class AuthService {
       name: dto.name,
       email: normalizedEmail,
       passwordHash: hashSync(dto.password, 10),
-      role: dto.role
+      role: dto.role ?? Role.RESPONSAVEL
     });
     const saved = await this.usersRepository.save(user);
     return this.issueToken(saved);
@@ -39,6 +39,31 @@ export class AuthService {
       throw new UnauthorizedException("Credenciais inválidas");
     }
     return this.issueToken(user);
+  }
+
+  async getProfile(userId: string) {
+    const user = await this.usersRepository.findOne({ where: { id: userId } });
+    if (!user) {
+      throw new NotFoundException("Usuário não encontrado.");
+    }
+    return {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      role: user.role
+    };
+  }
+
+  async updateProfile(userId: string, dto: UpdateProfileDto) {
+    const user = await this.usersRepository.findOne({ where: { id: userId } });
+    if (!user) {
+      throw new NotFoundException("Usuário não encontrado.");
+    }
+    if (dto.name !== undefined) {
+      user.name = dto.name.trim();
+    }
+    await this.usersRepository.save(user);
+    return this.getProfile(userId);
   }
 
   private issueToken(user: UserEntity) {

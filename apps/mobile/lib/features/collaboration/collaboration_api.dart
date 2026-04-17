@@ -56,6 +56,24 @@ class CollaborationApi {
       }
     );
   }
+
+  Future<void> updateOwnedClinic({
+    required String clinicId,
+    String? name,
+    String? addressLine,
+    String? phone,
+    String? whatsappPhone
+  }) async {
+    await _dio.patch(
+      "/owner/profiles/clinics/$clinicId",
+      data: {
+        "name": name,
+        "addressLine": addressLine,
+        "phone": phone,
+        "whatsappPhone": whatsappPhone
+      }
+    );
+  }
 }
 
 final collaborationApiProvider = Provider<CollaborationApi>((ref) {

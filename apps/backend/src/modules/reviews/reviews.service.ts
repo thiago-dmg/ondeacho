@@ -1,9 +1,23 @@
-import { BadRequestException, Injectable } from "@nestjs/common";
+import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Repository } from "typeorm";
 import { ClinicEntity } from "../listings/entities/clinic.entity";
 import { CreateReviewDto } from "./dto/create-review.dto";
 import { ReviewEntity } from "./entities/review.entity";
+import { computeAppRating } from "./review-summary.util";
+
+export type ReviewSummaryDto = {
+  averageRating: number | null;
+  reviewCount: number;
+};
+
+export type PublicReviewDto = {
+  id: string;
+  rating: number;
+  comment: string;
+  createdAt: Date;
+  authorName: string;
+};
 
 @Injectable()
 export class ReviewsService {
@@ -36,10 +50,48 @@ export class ReviewsService {
     return this.reviewsRepository.save(review);
   }
 
-  findByListing(listingId: string) {
-    return this.reviewsRepository.find({
+  async findByListing(listingId: string): Promise<PublicReviewDto[]> {
+    const rows = await this.reviewsRepository.find({
       where: { clinicId: listingId, status: "approved" },
+      relations: { user: true },
       order: { createdAt: "DESC" }
     });
+    return rows.map((r) => ({
+      id: r.id,
+      rating: r.rating,
+      comment: r.comment,
+      createdAt: r.createdAt,
+      authorName: r.user?.name ?? "Usuário"
+    }));
+  }
+
+  async getSummary(listingId: string): Promise<ReviewSummaryDto> {
+    const clinic = await this.clinicsRepository.findOne({ where: { id: listingId } });
+    if (!clinic) {
+      throw new NotFoundException("Clínica não encontrada.");
+    }
+
+    const raw = await this.reviewsRepository
+      .createQueryBuilder("r")
+      .select("SUM(r.rating)", "sum")
+      .addSelect("COUNT(*)", "count")
+      .where("r.clinicId = :listingId AND r.status = :status", {
+        listingId,
+        status: "approved"
+      })
+      .getRawOne<{ sum: string | null; count: string | null }>();
+
+    const appReviewCount = Number(raw?.count ?? 0);
+    const sumRatings = raw?.sum != null ? Number(raw.sum) : 0;
+
+    const { averageRating, reviewCount } = computeAppRating({
+      appSumRatings: sumRatings,
+      appReviewCount
+    });
+
+    return {
+      averageRating,
+      reviewCount
+    };
   }
 }

@@ -20,4 +20,10 @@ export class AdminReviewsService {
     review.status = status;
     return this.reviewsRepository.save(review);
   }
+
+  async remove(id: string) {
+    const review = await this.reviewsRepository.findOne({ where: { id } });
+    if (!review) throw new NotFoundException("Avaliação não encontrada.");
+    await this.reviewsRepository.remove(review);
+  }
 }

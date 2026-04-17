@@ -32,6 +32,20 @@ export class ProfileClaimsService {
       if (!clinic) {
         throw new BadRequestException("Clínica não encontrada.");
       }
+      if (clinic.isClaimed) {
+        throw new BadRequestException("Esta clínica já possui um perfil reivindicado.");
+      }
+
+      const existingPendingClinicClaim = await this.claimsRepository.findOne({
+        where: {
+          requesterUserId: userId,
+          clinicId: dto.clinicId,
+          status: ReviewStatus.PENDING
+        }
+      });
+      if (existingPendingClinicClaim) {
+        throw new BadRequestException("Você já possui uma solicitação pendente para esta clínica.");
+      }
     }
 
     if (dto.professionalId) {
@@ -40,6 +54,20 @@ export class ProfileClaimsService {
       });
       if (!professional) {
         throw new BadRequestException("Profissional não encontrado.");
+      }
+      if (professional.isClaimed) {
+        throw new BadRequestException("Este profissional já possui um perfil reivindicado.");
+      }
+
+      const existingPendingProfessionalClaim = await this.claimsRepository.findOne({
+        where: {
+          requesterUserId: userId,
+          professionalId: dto.professionalId,
+          status: ReviewStatus.PENDING
+        }
+      });
+      if (existingPendingProfessionalClaim) {
+        throw new BadRequestException("Você já possui uma solicitação pendente para este profissional.");
       }
     }
 

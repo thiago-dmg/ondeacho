@@ -12,7 +12,11 @@ class ClinicListing {
   final bool isClaimed;
   final bool isVerified;
   final double rating;
+  /// Nota combinada (Google + app), quando a API envia (listagem enriquecida).
+  final double? displayRating;
+  final int displayReviewCount;
   final String? description;
+  final List<ClinicProfessionalSummary> professionals;
 
   const ClinicListing({
     required this.id,
@@ -28,8 +32,22 @@ class ClinicListing {
     required this.isClaimed,
     required this.isVerified,
     required this.rating,
-    this.description
+    this.displayRating,
+    this.displayReviewCount = 0,
+    this.description,
+    this.professionals = const []
   });
+
+  /// Texto curto para lista: alinha com a ficha quando `displayRating` existe.
+  String get ratingLineLabel {
+    if (displayRating != null) {
+      return "Nota ${displayRating!.toStringAsFixed(1)} • $displayReviewCount aval.";
+    }
+    if (rating > 0) {
+      return "Nota ${rating.toStringAsFixed(1)}";
+    }
+    return "Sem avaliações ainda";
+  }
 
   factory ClinicListing.fromJson(Map<String, dynamic> json) {
     final ratingValue = json["rating"];
@@ -47,7 +65,29 @@ class ClinicListing {
       isClaimed: json["isClaimed"] == true,
       isVerified: json["isVerified"] == true,
       rating: double.tryParse(ratingValue?.toString() ?? "0") ?? 0,
-      description: json["description"]?.toString()
+      displayRating: json["displayRating"] != null
+          ? double.tryParse(json["displayRating"].toString())
+          : null,
+      displayReviewCount: int.tryParse(json["displayReviewCount"]?.toString() ?? "0") ?? 0,
+      description: json["description"]?.toString(),
+      professionals: (json["professionals"] as List<dynamic>? ?? [])
+          .whereType<Map<String, dynamic>>()
+          .map(ClinicProfessionalSummary.fromJson)
+          .toList()
+    );
+  }
+}
+
+class ClinicProfessionalSummary {
+  final String id;
+  final String name;
+
+  const ClinicProfessionalSummary({required this.id, required this.name});
+
+  factory ClinicProfessionalSummary.fromJson(Map<String, dynamic> json) {
+    return ClinicProfessionalSummary(
+      id: json["id"]?.toString() ?? "",
+      name: json["name"]?.toString() ?? ""
     );
   }
 }

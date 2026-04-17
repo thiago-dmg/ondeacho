@@ -1,4 +1,6 @@
 import { useEffect, useState } from "react";
+import { AdminLayout } from "../src/components/AdminLayout";
+import { Modal } from "../src/components/Modal";
 import { apiRequest } from "../src/services/api";
 
 type Suggestion = {
@@ -14,6 +16,9 @@ type Suggestion = {
 
 export default function ClinicSuggestionsPage() {
   const [items, setItems] = useState<Suggestion[]>([]);
+  const [error, setError] = useState("");
+  const [rejectId, setRejectId] = useState<string | null>(null);
+  const [rejectNote, setRejectNote] = useState("");
 
   async function load() {
     const data = await apiRequest<Suggestion[]>("/admin/clinic-suggestions?status=PENDENTE");
@@ -21,48 +26,117 @@ export default function ClinicSuggestionsPage() {
   }
 
   useEffect(() => {
-    void load();
+    void load().catch((e) => setError(e instanceof Error ? e.message : "Erro ao carregar."));
   }, []);
 
   async function approve(id: string) {
-    await apiRequest(`/admin/clinic-suggestions/${id}/approve`, {
-      method: "PATCH",
-      body: JSON.stringify({})
-    });
-    await load();
+    setError("");
+    try {
+      await apiRequest(`/admin/clinic-suggestions/${id}/approve`, {
+        method: "PATCH",
+        body: JSON.stringify({})
+      });
+      await load();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Falha ao aprovar.");
+    }
   }
 
-  async function reject(id: string) {
-    const note = window.prompt("Motivo da rejeição (opcional)") ?? "";
-    await apiRequest(`/admin/clinic-suggestions/${id}/reject`, {
-      method: "PATCH",
-      body: JSON.stringify({ note })
-    });
-    await load();
+  async function confirmReject() {
+    if (!rejectId) return;
+    setError("");
+    try {
+      await apiRequest(`/admin/clinic-suggestions/${rejectId}/reject`, {
+        method: "PATCH",
+        body: JSON.stringify({ note: rejectNote.trim() })
+      });
+      setRejectId(null);
+      setRejectNote("");
+      await load();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Falha ao rejeitar.");
+    }
   }
 
   return (
-    <main style={{ fontFamily: "Arial, sans-serif", padding: 24 }}>
-      <h1>Sugestões de clínicas/profissionais</h1>
-      <p>Total pendente: {items.length}</p>
-      <ul style={{ display: "grid", gap: 8, padding: 0, listStyle: "none" }}>
+    <AdminLayout
+      title="Sugestões da comunidade"
+      description="Cadastros sugeridos por usuários. Aprovar cria o registro; rejeitar pode incluir motivo interno."
+    >
+      {error ? <p className="oa-error">{error}</p> : null}
+
+      <p style={{ marginTop: 0, marginBottom: 16 }}>
+        <span className="oa-badge oa-badge--pending">Pendentes: {items.length}</span>
+      </p>
+
+      <div className="oa-list-stack">
         {items.map((item) => (
-          <li key={item.id} style={{ border: "1px solid #ddd", borderRadius: 8, padding: 12 }}>
-            <strong>{item.name}</strong> ({item.targetType}) - {item.city}
-            <br />
-            {item.phone ? `Telefone: ${item.phone} • ` : ""}
-            Sugerido por: {item.suggestedByName}
-            <br />
-            <small>{new Date(item.createdAt).toLocaleString("pt-BR")}</small>
-            <div style={{ marginTop: 8 }}>
-              <button onClick={() => void approve(item.id)}>Aprovar</button>
-              <button onClick={() => void reject(item.id)} style={{ marginLeft: 8 }}>
-                Rejeitar
+          <article key={item.id} className="oa-card">
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center", marginBottom: 8 }}>
+              <strong style={{ fontSize: "1.05rem" }}>{item.name}</strong>
+              <span className="oa-badge oa-badge--muted">{item.targetType === "clinica" ? "Clínica" : "Profissional"}</span>
+            </div>
+            <p className="oa-muted" style={{ margin: "0 0 8px" }}>
+              {item.city}
+              {item.phone ? ` · ${item.phone}` : ""}
+            </p>
+            <p style={{ margin: "0 0 8px" }}>
+              Sugerido por <strong>{item.suggestedByName}</strong>
+            </p>
+            <p className="oa-muted" style={{ margin: 0, fontSize: "0.85rem" }}>
+              {new Date(item.createdAt).toLocaleString("pt-BR")}
+            </p>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 14 }}>
+              <button type="button" className="oa-btn oa-btn--primary oa-btn--sm" onClick={() => void approve(item.id)}>
+                Aprovar
+              </button>
+              <button
+                type="button"
+                className="oa-btn oa-btn--secondary oa-btn--sm"
+                onClick={() => {
+                  setRejectId(item.id);
+                  setRejectNote("");
+                }}
+              >
+                Rejeitar…
               </button>
             </div>
-          </li>
+          </article>
         ))}
-      </ul>
-    </main>
+        {items.length === 0 ? <p className="oa-muted">Nenhuma sugestão pendente.</p> : null}
+      </div>
+
+      <Modal
+        open={Boolean(rejectId)}
+        title="Rejeitar sugestão"
+        onClose={() => {
+          setRejectId(null);
+          setRejectNote("");
+        }}
+        footer={
+          <>
+            <button type="button" className="oa-btn oa-btn--ghost" onClick={() => setRejectId(null)}>
+              Cancelar
+            </button>
+            <button type="button" className="oa-btn oa-btn--primary" onClick={() => void confirmReject()}>
+              Confirmar rejeição
+            </button>
+          </>
+        }
+      >
+        <div className="oa-field">
+          <label className="oa-label" htmlFor="rej-note-sug">
+            Motivo (opcional)
+          </label>
+          <textarea
+            id="rej-note-sug"
+            className="oa-textarea"
+            value={rejectNote}
+            onChange={(e) => setRejectNote(e.target.value)}
+            placeholder="Será armazenado para auditoria interna."
+          />
+        </div>
+      </Modal>
+    </AdminLayout>
   );
 }

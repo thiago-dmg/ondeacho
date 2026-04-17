@@ -16,6 +16,11 @@ export class ReviewsController {
     return this.reviewsService.create(dto, user.sub);
   }
 
+  @Get("listing/:listingId/summary")
+  getSummary(@Param("listingId") listingId: string) {
+    return this.reviewsService.getSummary(listingId);
+  }
+
   @Get("listing/:listingId")
   findByListing(@Param("listingId") listingId: string) {
     return this.reviewsService.findByListing(listingId);

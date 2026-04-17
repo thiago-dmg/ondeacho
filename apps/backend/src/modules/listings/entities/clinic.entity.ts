@@ -60,6 +60,12 @@ export class ClinicEntity {
   @Column({ type: "numeric", precision: 2, scale: 1, default: 0 })
   rating!: number;
 
+  @Column({ name: "external_rating", type: "numeric", precision: 2, scale: 1, nullable: true })
+  externalRating!: number | null;
+
+  @Column({ name: "external_review_count", type: "int", nullable: true })
+  externalReviewCount!: number | null;
+
   @ManyToMany(() => SpecialtyEntity)
   @JoinTable({
     name: "clinic_specialties",

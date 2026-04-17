@@ -4,25 +4,44 @@ import "../../core/network/api_client.dart";
 
 class ContactRequest {
   final String id;
+  final String clinicId;
   final String clinicName;
   final String preferredChannel;
   final String? message;
+  final DateTime? createdAt;
 
   const ContactRequest({
     required this.id,
+    required this.clinicId,
     required this.clinicName,
     required this.preferredChannel,
-    this.message
+    this.message,
+    this.createdAt
   });
 
   factory ContactRequest.fromJson(Map<String, dynamic> json) {
     final clinic = (json["clinic"] as Map<String, dynamic>? ?? const {});
     return ContactRequest(
       id: json["id"]?.toString() ?? "",
+      clinicId: json["clinicId"]?.toString() ?? "",
       clinicName: clinic["name"]?.toString() ?? "Clínica",
       preferredChannel: json["preferredChannel"]?.toString() ?? "whatsapp",
-      message: json["message"]?.toString()
+      message: json["message"]?.toString(),
+      createdAt: json["createdAt"] != null ? DateTime.tryParse(json["createdAt"].toString()) : null
     );
+  }
+}
+
+String contactChannelLabel(String channel) {
+  switch (channel) {
+    case "whatsapp":
+      return "WhatsApp";
+    case "email":
+      return "E-mail";
+    case "phone":
+      return "Telefone";
+    default:
+      return channel;
   }
 }
 

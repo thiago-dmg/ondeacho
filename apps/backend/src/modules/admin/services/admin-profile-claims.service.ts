@@ -66,6 +66,12 @@ export class AdminProfileClaimsService {
     if (claim.clinicId) {
       const clinic = await this.clinicsRepository.findOne({ where: { id: claim.clinicId } });
       if (!clinic) throw new NotFoundException("Clínica não encontrada para vinculação.");
+      const existingClinicOwner = await this.ownersRepository.findOne({
+        where: { clinicId: claim.clinicId }
+      });
+      if (existingClinicOwner) {
+        throw new BadRequestException("Esta clínica já possui proprietário aprovado.");
+      }
       clinic.isClaimed = true;
       clinic.isVerified = true;
       await this.clinicsRepository.save(clinic);
@@ -76,6 +82,12 @@ export class AdminProfileClaimsService {
         where: { id: claim.professionalId }
       });
       if (!professional) throw new NotFoundException("Profissional não encontrado para vinculação.");
+      const existingProfessionalOwner = await this.ownersRepository.findOne({
+        where: { professionalId: claim.professionalId }
+      });
+      if (existingProfessionalOwner) {
+        throw new BadRequestException("Este profissional já possui proprietário aprovado.");
+      }
       professional.isClaimed = true;
       professional.isVerified = true;
       await this.professionalsRepository.save(professional);

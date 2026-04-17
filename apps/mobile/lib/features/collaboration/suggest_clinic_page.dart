@@ -1,6 +1,11 @@
 import "package:flutter/material.dart";
 import "package:flutter_riverpod/flutter_riverpod.dart";
 import "package:go_router/go_router.dart";
+import "package:lucide_icons/lucide_icons.dart";
+import "../../core/theme/app_colors.dart";
+import "../../core/widgets/lucide_icon.dart";
+import "../../core/theme/app_dimensions.dart";
+import "../../core/widgets/app_section_header.dart";
 import "../auth/auth_state.dart";
 import "collaboration_api.dart";
 
@@ -96,8 +101,53 @@ class _SuggestClinicPageState extends ConsumerState<SuggestClinicPage> {
       body: Form(
         key: _formKey,
         child: ListView(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(AppDim.space2),
           children: [
+            Container(
+              padding: const EdgeInsets.all(AppDim.space2),
+              decoration: BoxDecoration(
+                color: AppColors.card,
+                borderRadius: BorderRadius.circular(AppDim.radiusCard),
+                border: Border.all(color: AppColors.divider),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.shadow,
+                    blurRadius: 8,
+                    offset: const Offset(0, 2)
+                  )
+                ]
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      const LIcon(LucideIcons.heartHandshake, color: AppColors.primary, size: 28),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          "Ajude outras famílias",
+                          style: Theme.of(context).textTheme.titleMedium
+                        )
+                      )
+                    ]
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    "Cada sugestão passa por revisão antes de entrar na busca. Quanto mais completo o formulário, mais rápido conseguimos validar.",
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: AppColors.textSecondary,
+                          height: 1.45
+                        )
+                  )
+                ]
+              )
+            ),
+            const SizedBox(height: AppDim.space3),
+            const AppSectionHeader(
+              title: "Tipo de cadastro",
+              subtitle: "Indique se é um local (clínica) ou um profissional autônomo."
+            ),
             DropdownButtonFormField<String>(
               initialValue: _targetType,
               decoration: const InputDecoration(labelText: "Tipo"),
@@ -107,16 +157,22 @@ class _SuggestClinicPageState extends ConsumerState<SuggestClinicPage> {
               ],
               onChanged: (value) => setState(() => _targetType = value ?? "clinica")
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: AppDim.space3),
+            const AppSectionHeader(
+              title: "Dados básicos",
+              subtitle: "Nome e cidade são obrigatórios."
+            ),
             TextFormField(
               controller: _nameController,
               decoration: const InputDecoration(labelText: "Nome"),
+              textCapitalization: TextCapitalization.words,
               validator: (value) => (value == null || value.trim().isEmpty) ? "Informe o nome." : null
             ),
             const SizedBox(height: 12),
             TextFormField(
               controller: _cityController,
               decoration: const InputDecoration(labelText: "Cidade"),
+              textCapitalization: TextCapitalization.words,
               validator: (value) => (value == null || value.trim().isEmpty) ? "Informe a cidade." : null
             ),
             const SizedBox(height: 12),
@@ -125,31 +181,57 @@ class _SuggestClinicPageState extends ConsumerState<SuggestClinicPage> {
               decoration: const InputDecoration(labelText: "Bairro")
             ),
             const SizedBox(height: 12),
-            TextFormField(controller: _addressController, decoration: const InputDecoration(labelText: "Endereço")),
-            const SizedBox(height: 12),
-            TextFormField(controller: _phoneController, decoration: const InputDecoration(labelText: "Telefone")),
-            const SizedBox(height: 12),
             TextFormField(
-              controller: _whatsappController,
-              decoration: const InputDecoration(labelText: "WhatsApp")
+              controller: _addressController,
+              decoration: const InputDecoration(labelText: "Endereço"),
+              textCapitalization: TextCapitalization.sentences
+            ),
+            const SizedBox(height: AppDim.space3),
+            const AppSectionHeader(
+              title: "Contato",
+              subtitle: "Opcional, mas ajuda na verificação."
+            ),
+            TextFormField(
+              controller: _phoneController,
+              keyboardType: TextInputType.phone,
+              decoration: const InputDecoration(labelText: "Telefone")
             ),
             const SizedBox(height: 12),
             TextFormField(
+              controller: _whatsappController,
+              keyboardType: TextInputType.phone,
+              decoration: const InputDecoration(labelText: "WhatsApp")
+            ),
+            const SizedBox(height: AppDim.space3),
+            const AppSectionHeader(
+              title: "Informações médicas",
+              subtitle: "Separe especialidades e convênios por vírgula."
+            ),
+            TextFormField(
               controller: _specialtiesController,
-              decoration: const InputDecoration(labelText: "Especialidades (separe por vírgula)")
+              decoration: const InputDecoration(
+                labelText: "Especialidades",
+                hintText: "Ex.: Fonoaudiologia, Psicologia infantil"
+              )
             ),
             const SizedBox(height: 12),
             TextFormField(
               controller: _insurancesController,
-              decoration: const InputDecoration(labelText: "Convênios (separe por vírgula)")
+              decoration: const InputDecoration(
+                labelText: "Convênios",
+                hintText: "Ex.: Unimed, Bradesco Saúde"
+              )
             ),
             const SizedBox(height: 12),
             TextFormField(
               controller: _observationsController,
               maxLines: 3,
-              decoration: const InputDecoration(labelText: "Observações")
+              decoration: const InputDecoration(
+                labelText: "Observações",
+                alignLabelWithHint: true
+              )
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: AppDim.space3),
             FilledButton(
               onPressed: _loading ? null : _submit,
               child: Text(_loading ? "Enviando..." : "Enviar sugestão")

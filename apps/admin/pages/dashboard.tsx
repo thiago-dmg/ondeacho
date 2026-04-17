@@ -1,12 +1,23 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { AdminLayout } from "../src/components/AdminLayout";
 import { clearAdminToken } from "../src/lib/auth";
 import { apiRequest } from "../src/services/api";
 
+const LINKS: { href: string; label: string; hint: string }[] = [
+  { href: "/clinics", label: "Clínicas", hint: "CRUD completo, vínculos e descrição" },
+  { href: "/professionals", label: "Profissionais", hint: "Especialidades, convênios e clínica" },
+  { href: "/specialties", label: "Especialidades", hint: "Catálogo exibido nos filtros" },
+  { href: "/insurances", label: "Convênios", hint: "Planos para filtros e fichas" },
+  { href: "/reviews", label: "Avaliações", hint: "Moderação e exclusão" },
+  { href: "/clinic-suggestions", label: "Sugestões da comunidade", hint: "Aprovar ou rejeitar cadastros sugeridos" },
+  { href: "/profile-claims", label: "Reivindicações de perfil", hint: "Donos de clínicas e profissionais" }
+];
+
 export default function DashboardPage() {
-  const [usersCount, setUsersCount] = useState<number | string>("-");
-  const [clinicsCount, setClinicsCount] = useState(0);
-  const [pendingReviews, setPendingReviews] = useState(0);
+  const [usersCount, setUsersCount] = useState<number | string>("—");
+  const [clinicsCount, setClinicsCount] = useState<number | string>("—");
+  const [pendingReviews, setPendingReviews] = useState<number | string>("—");
 
   useEffect(() => {
     async function loadMetrics() {
@@ -33,40 +44,35 @@ export default function DashboardPage() {
   ];
 
   return (
-    <main style={{ fontFamily: "Arial, sans-serif", padding: 24 }}>
-      <h1>Dashboard</h1>
-      <p>
-        <Link href="/clinics">Gerenciar clínicas</Link>
-      </p>
-      <p>
-        <Link href="/professionals">Gerenciar profissionais</Link>
-      </p>
-      <p>
-        <Link href="/specialties">Gerenciar especialidades</Link>
-      </p>
-      <p>
-        <Link href="/insurances">Gerenciar convênios</Link>
-      </p>
-      <p>
-        <Link href="/reviews">Moderar avaliações</Link>
-      </p>
-      <p>
-        <Link href="/clinic-suggestions">Moderar sugestões da comunidade</Link>
-      </p>
-      <p>
-        <Link href="/profile-claims">Moderar reivindicações de perfil</Link>
-      </p>
-      <div style={{ display: "flex", gap: 12 }}>
+    <AdminLayout
+      title="Dashboard"
+      description="Visão geral do catálogo e atalhos para cada área administrativa."
+    >
+      <div className="oa-metric-grid">
         {metrics.map((metric) => (
-          <div
-            key={metric.label}
-            style={{ border: "1px solid #ddd", borderRadius: 8, padding: 12, minWidth: 180 }}
-          >
-            <strong>{metric.label}</strong>
-            <p>{metric.value}</p>
+          <div key={metric.label} className="oa-metric">
+            <p className="oa-metric__label">{metric.label}</p>
+            <p className="oa-metric__value">{metric.value}</p>
           </div>
         ))}
       </div>
-    </main>
+
+      <h2 style={{ fontSize: "1rem", fontWeight: 700, margin: "0 0 12px" }}>Gerenciamento</h2>
+      <div className="oa-dash-links">
+        {LINKS.map((link) => (
+          <Link key={link.href} href={link.href}>
+            <span style={{ flex: 1 }}>
+              {link.label}
+              <span className="oa-muted" style={{ display: "block", fontWeight: 500, marginTop: 4 }}>
+                {link.hint}
+              </span>
+            </span>
+            <span aria-hidden style={{ color: "var(--oa-teal)", fontSize: "1.25rem" }}>
+              →
+            </span>
+          </Link>
+        ))}
+      </div>
+    </AdminLayout>
   );
 }

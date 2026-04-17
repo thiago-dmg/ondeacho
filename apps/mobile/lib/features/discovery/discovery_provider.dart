@@ -54,17 +54,25 @@ final insurancesProvider = FutureProvider<List<CatalogOption>>((ref) async {
       .toList();
 });
 
-final clinicsProvider = FutureProvider<List<ClinicListing>>((ref) async {
-  final dio = ref.watch(dioProvider);
+final clinicsProvider = FutureProvider.autoDispose<List<ClinicListing>>((ref) async {
   final specialtyId = ref.watch(selectedSpecialtyIdProvider);
   final insuranceId = ref.watch(selectedInsuranceIdProvider);
+  if (specialtyId == null && insuranceId == null) {
+    return [];
+  }
+
+  final dio = ref.watch(dioProvider);
   try {
+    final queryParameters = <String, dynamic>{};
+    if (specialtyId != null) {
+      queryParameters["specialtyId"] = specialtyId;
+    }
+    if (insuranceId != null) {
+      queryParameters["insuranceId"] = insuranceId;
+    }
     final response = await dio.get<List<dynamic>>(
       "/listings",
-      queryParameters: {
-        "specialtyId": specialtyId,
-        "insuranceId": insuranceId
-      }
+      queryParameters: queryParameters
     );
     final list = response.data ?? [];
     return list
@@ -76,17 +84,25 @@ final clinicsProvider = FutureProvider<List<ClinicListing>>((ref) async {
   }
 });
 
-final professionalsProvider = FutureProvider<List<ProfessionalListing>>((ref) async {
-  final dio = ref.watch(dioProvider);
+final professionalsProvider = FutureProvider.autoDispose<List<ProfessionalListing>>((ref) async {
   final specialtyId = ref.watch(selectedSpecialtyIdProvider);
   final insuranceId = ref.watch(selectedInsuranceIdProvider);
+  if (specialtyId == null && insuranceId == null) {
+    return [];
+  }
+
+  final dio = ref.watch(dioProvider);
   try {
+    final queryParameters = <String, dynamic>{};
+    if (specialtyId != null) {
+      queryParameters["specialtyId"] = specialtyId;
+    }
+    if (insuranceId != null) {
+      queryParameters["insuranceId"] = insuranceId;
+    }
     final response = await dio.get<List<dynamic>>(
       "/professionals",
-      queryParameters: {
-        "specialtyId": specialtyId,
-        "insuranceId": insuranceId
-      }
+      queryParameters: queryParameters
     );
     final list = response.data ?? [];
     return list
@@ -99,7 +115,7 @@ final professionalsProvider = FutureProvider<List<ProfessionalListing>>((ref) as
 });
 
 final clinicDetailProvider =
-    FutureProvider.family<ClinicListing, String>((ref, clinicId) async {
+    FutureProvider.autoDispose.family<ClinicListing, String>((ref, clinicId) async {
   final dio = ref.watch(dioProvider);
   final response = await dio.get<Map<String, dynamic>>("/listings/$clinicId");
   return ClinicListing.fromJson(response.data ?? {});
