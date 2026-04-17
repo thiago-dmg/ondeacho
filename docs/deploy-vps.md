@@ -55,4 +55,6 @@ Exponha `https` na porta 443 e faça proxy para `http://127.0.0.1:3000` (ou a po
 
 ## Painel admin (Next.js)
 
-O deploy atual é só da **API**. Para subir o `apps/admin` na mesma VPS, o próximo passo típico é `next build` com `output: 'standalone'`, empacotar `.next/standalone` + estáticos e outro unit systemd — pode ser um segundo workflow quando quiser.
+O admin usa **`NEXT_PUBLIC_API_URL`** (URL completa com `/api/v1`). O repositório inclui `apps/admin/.env.production` apontando para a API na VPS; em desenvolvimento local, crie `apps/admin/.env.local` com `http://localhost:3000/api/v1` (ou o IP da API). As chamadas HTTP ficam em `apps/admin/src/services/api.ts` (sem localhost fixo no código além do fallback de produção).
+
+Para subir o admin como serviço na VPS, o passo típico é `next build` com `output: 'standalone'`, empacotar `.next/standalone` + estáticos e um unit systemd — pode ser um segundo workflow quando quiser.
