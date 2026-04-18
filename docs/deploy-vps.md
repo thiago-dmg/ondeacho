@@ -51,13 +51,50 @@ Defina **`PORT`** em `/etc/ondeacho-api.env` (ex.: `PORT=3000`) para a API e par
 
 ## Importação em lote (cadastros de clínicas)
 
-O arquivo `apps/backend/src/database/import/clinicas-novas.json` contém dezenas de registros agregados. Para carregar no Postgres (local ou VPS), com as variáveis `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME` definidas no ambiente:
+O arquivo `apps/backend/src/database/import/clinicas-novas.json` contém dezenas de registros. O script **`db:import-clinicas`** precisa do **repositório completo** (monorepo com `package.json` na raiz e workspaces), porque o deploy da API em `/var/www/ondeacho-api` **só envia** `dist` + `node_modules` de produção — **não** existe lá `import-clinicas-json.ts` nem o JSON.
 
-```bash
-npm run db:import-clinicas
-```
+**Erros comuns na VPS**
 
-(O comando roda `ts-node` em `apps/backend`.) Esse script **não** executa `seed.sql`; apenas importa/atualiza clínicas e profissionais a partir do JSON. Migrações continuam sendo `npm run db:migrate` quando necessário.
+- **`cd /var/www/ondeacho-admin`**: essa pasta **não é criada** pelo workflow atual (o deploy é só da API em **`/var/www/ondeacho-api`**). O painel admin Next pode nem estar na VPS.
+- **`Could not read package.json` em `/root`**: o `npm run` foi executado na home do root **fora** da pasta do projeto. O comando tem de rodar na **raiz do clone** do repositório (onde está o `package.json` do monorepo).
+
+**Procedimento recomendado na VPS**
+
+1. Clonar o repositório em um diretório só para ferramentas (ex.: `/var/www/ondeacho-src` ou `~/ondeacho`):
+
+   ```bash
+   sudo mkdir -p /var/www
+   cd /var/www
+   sudo git clone https://github.com/SEU_USUARIO/ondeacho.git ondeacho-src
+   sudo chown -R "$USER:$USER" ondeacho-src
+   cd ondeacho-src
+   ```
+
+2. Instalar dependências na raiz (necessário para `npm run db:import-clinicas` usar o workspace `apps/backend`):
+
+   ```bash
+   npm ci
+   ```
+
+3. Exportar as variáveis do **mesmo** Postgres que a API usa (veja `/etc/ondeacho-api.env` ou o que você configurou) e rodar **na raiz do clone**:
+
+   ```bash
+   export DB_HOST=127.0.0.1
+   export DB_PORT=5432
+   export DB_USER=ondeacho_user
+   export DB_PASSWORD='SUA_SENHA'
+   export DB_NAME=ondeacho_db
+
+   npm run db:import-clinicas
+   ```
+
+   (Equivalente: `npm --workspace apps/backend run db:import-clinicas` a partir da **mesma** raiz.)
+
+4. Depois do import, pode atualizar o clone com `git pull` quando o JSON mudar no repositório.
+
+Esse script **não** executa `seed.sql`; só importa/atualiza clínicas e profissionais a partir do JSON. Migrações: `npm run db:migrate` no mesmo clone, se necessário.
+
+**No seu PC (Windows/Git Bash)** o import já funciona dentro de `OndeAcho` com `cd apps/backend` ou na raiz do monorepo — o problema na VPS era só **diretório errado** e **projeto inexistente** (`ondeacho-admin`).
 
 ## Proxy reverso (Nginx / Caddy)
 
