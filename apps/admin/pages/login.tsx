@@ -5,6 +5,22 @@ import { setAdminToken } from "../src/lib/auth";
 import { getSafeInternalPath } from "../src/lib/safe-redirect";
 import { apiRequest } from "../src/services/api";
 
+function parseAuthErrorMessage(error: unknown): string {
+  if (!(error instanceof Error)) {
+    return "Falha de autenticação.";
+  }
+  const raw = error.message.trim();
+  try {
+    const parsed = JSON.parse(raw) as { message?: unknown };
+    if (typeof parsed.message === "string" && parsed.message.length > 0) {
+      return parsed.message;
+    }
+  } catch {
+    /* não é JSON */
+  }
+  return raw.length > 0 ? raw : "Falha de autenticação.";
+}
+
 export default function LoginPage() {
   const router = useRouter();
   const [email, setEmail] = useState("");
@@ -38,7 +54,7 @@ export default function LoginPage() {
       const dest = getSafeInternalPath(nextFromQuery, "/dashboard");
       await router.push(dest);
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Falha de autenticação.");
+      setMessage(parseAuthErrorMessage(error));
     } finally {
       setLoading(false);
     }

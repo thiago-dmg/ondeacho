@@ -1,19 +1,27 @@
 import { getAdminToken } from "../lib/auth";
 
-/** Produção (VPS). Sobrescreva com NEXT_PUBLIC_API_URL em .env.local para dev local. */
-const DEFAULT_API_BASE_URL = "http://72.61.35.190:3000/api/v1";
+/** Produção (VPS). Em `next dev` o padrão é API local na porta 3000. */
+const DEFAULT_API_PRODUCTION = "http://72.61.35.190:3000/api/v1";
+const DEFAULT_API_DEVELOPMENT = "http://127.0.0.1:3000/api/v1";
 
 function normalizeBaseUrl(raw: string): string {
   return raw.trim().replace(/\/+$/, "");
 }
 
+function defaultApiWhenNoEnv(): string {
+  if (process.env.NODE_ENV === "development") {
+    return DEFAULT_API_DEVELOPMENT;
+  }
+  return DEFAULT_API_PRODUCTION;
+}
+
 /**
- * Base da API (inclui /api/v1). Ordem: NEXT_PUBLIC_API_URL → NEXT_PUBLIC_API_BASE_URL (legado) → padrão VPS.
+ * Base da API (inclui /api/v1). Ordem: NEXT_PUBLIC_API_URL → NEXT_PUBLIC_API_BASE_URL (legado) → padrão (local em dev, VPS em build).
  */
 export function getApiBaseUrl(): string {
   const fromEnv =
     process.env.NEXT_PUBLIC_API_URL?.trim() || process.env.NEXT_PUBLIC_API_BASE_URL?.trim();
-  return normalizeBaseUrl(fromEnv || DEFAULT_API_BASE_URL);
+  return normalizeBaseUrl(fromEnv || defaultApiWhenNoEnv());
 }
 
 const logRequests = process.env.NEXT_PUBLIC_API_LOG_REQUESTS !== "0";
