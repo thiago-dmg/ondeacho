@@ -34,6 +34,12 @@ Essa URL é embutida no build do Next; alterou → rode o workflow de novo.
 
 5. **Disparar o deploy** — faça push em `main` alterando `apps/admin/**` ou use **Actions → Deploy Admin to VPS → Run workflow**.
 
+## Acesso pelo IP (porta 3001)
+
+O admin escuta na **3001**. No painel da **Hostinger → Firewall da VPS**, tens de ter uma regra **Accept | TCP | 3001 | Any** (ou equivalente). Sem isso, o browser de fora dá **ERR_CONNECTION_TIMED_OUT** — o serviço até pode estar OK em `curl http://127.0.0.1:3001` na própria VPS.
+
+Para produção é melhor **Nginx na 80/443** a fazer proxy para `http://127.0.0.1:3001` e **não** expor a 3001 na internet.
+
 ## Nginx (exemplo)
 
 Substitua `admin.seudominio.com` e o caminho do certificado.

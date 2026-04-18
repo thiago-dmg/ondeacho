@@ -283,7 +283,7 @@ jobs:
           [Service]
           Type=simple
           WorkingDirectory=${REMOTE}/current/apps/admin
-          ExecStart=/usr/bin/node ${REMOTE}/current/node_modules/next/dist/bin/next start -p ${PORT}
+          ExecStart=/usr/bin/node ${REMOTE}/current/node_modules/next/dist/bin/next start -H 0.0.0.0 -p ${PORT}
           Restart=always
           RestartSec=5
           KillSignal=SIGINT
