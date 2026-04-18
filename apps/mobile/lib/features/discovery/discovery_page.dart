@@ -113,6 +113,7 @@ class DiscoveryPage extends ConsumerWidget {
                   ),
                   specialtiesAsync.when(
                     data: (items) => DropdownButtonFormField<String?>(
+                      key: ValueKey<String?>("spec_${selectedSpecialty ?? "all"}"),
                       initialValue: selectedSpecialty,
                       decoration: const InputDecoration(
                         labelText: "Especialidade",
@@ -139,6 +140,7 @@ class DiscoveryPage extends ConsumerWidget {
                   const SizedBox(height: AppDim.space1),
                   insurancesAsync.when(
                     data: (items) => DropdownButtonFormField<String?>(
+                      key: ValueKey<String?>("ins_${selectedInsurance ?? "all"}"),
                       initialValue: selectedInsurance,
                       decoration: const InputDecoration(
                         labelText: "Convênio",

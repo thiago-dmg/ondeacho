@@ -49,6 +49,16 @@ No topo do YAML, altere se precisar:
 
 Defina **`PORT`** em `/etc/ondeacho-api.env` (ex.: `PORT=3000`) para a API e para o teste `curl` no final do deploy.
 
+## Importação em lote (cadastros de clínicas)
+
+O arquivo `apps/backend/src/database/import/clinicas-novas.json` contém dezenas de registros agregados. Para carregar no Postgres (local ou VPS), com as variáveis `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME` definidas no ambiente:
+
+```bash
+npm run db:import-clinicas
+```
+
+(O comando roda `ts-node` em `apps/backend`.) Esse script **não** executa `seed.sql`; apenas importa/atualiza clínicas e profissionais a partir do JSON. Migrações continuam sendo `npm run db:migrate` quando necessário.
+
 ## Proxy reverso (Nginx / Caddy)
 
 Exponha `https` na porta 443 e faça proxy para `http://127.0.0.1:3000` (ou a porta configurada). Garanta que `CORS_ORIGINS` inclua a origem do front/admin.

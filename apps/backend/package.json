@@ -10,6 +10,7 @@
     "lint": "tsc --noEmit",
     "db:migrate": "ts-node src/database/migrate.ts",
     "db:seed": "ts-node src/database/seed.ts",
+    "db:import-clinicas": "ts-node src/database/import-clinicas-json.ts",
     "test": "echo \"Configurar testes na etapa seguinte\""
   },
   "keywords": [],
