@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post, UseGuards } from "@nestjs/common";
+import { Body, Controller, Get, Param, ParseUUIDPipe, Post, UseGuards } from "@nestjs/common";
 import { ApiTags } from "@nestjs/swagger";
 import { CurrentUser } from "../../common/decorators/current-user.decorator";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
@@ -17,12 +17,12 @@ export class ReviewsController {
   }
 
   @Get("listing/:listingId/summary")
-  getSummary(@Param("listingId") listingId: string) {
+  getSummary(@Param("listingId", ParseUUIDPipe) listingId: string) {
     return this.reviewsService.getSummary(listingId);
   }
 
   @Get("listing/:listingId")
-  findByListing(@Param("listingId") listingId: string) {
+  findByListing(@Param("listingId", ParseUUIDPipe) listingId: string) {
     return this.reviewsService.findByListing(listingId);
   }
 }

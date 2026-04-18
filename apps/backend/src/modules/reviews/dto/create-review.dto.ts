@@ -1,10 +1,9 @@
 import { ApiProperty } from "@nestjs/swagger";
-import { IsInt, IsNotEmpty, IsString, Max, Min } from "class-validator";
+import { IsInt, IsNotEmpty, IsString, IsUUID, Max, Min } from "class-validator";
 
 export class CreateReviewDto {
-  @ApiProperty()
-  @IsString()
-  @IsNotEmpty()
+  @ApiProperty({ format: "uuid" })
+  @IsUUID()
   clinicId!: string;
 
   @ApiProperty({ minimum: 1, maximum: 5 })
