@@ -26,19 +26,23 @@ npm run db:seed
 Swagger: [http://localhost:3000/docs](http://localhost:3000/docs)
 Health: [http://localhost:3000/api/v1/health](http://localhost:3000/api/v1/health) e [http://localhost:3000/api/v1/health/ready](http://localhost:3000/api/v1/health/ready)
 
-## Rodar sem Docker (local)
-1. Suba Postgres local.
-2. Copie `apps/backend/.env.example` para `apps/backend/.env`.
-3. Execute migration e seed:
+## Setup local rápido (Postgres via Docker + migrate + seed)
+Na raiz do repositório (com Docker instalado):
 ```bash
-npm run db:migrate
-npm run db:seed
+npm install
+npm run setup:local
 ```
-4. Rode:
+Isso cria `apps/backend/.env` a partir do exemplo, sobe só o serviço `db`, aplica migrações e o seed. Depois:
 ```bash
 npm run dev:backend
 npm run dev:admin
 ```
+O admin em `next dev` usa `apps/admin/.env.development` e aponta para `http://127.0.0.1:3000/api/v1`.
+
+## Rodar sem Docker (Postgres já instalado)
+1. Copie `apps/backend/.env.example` para `apps/backend/.env` e ajuste `DB_*`.
+2. `npm run db:migrate` e `npm run db:seed`
+3. `npm run dev:backend` e `npm run dev:admin`
 
 ## Credenciais seed
 - Admin: `admin@ondeacho.app` / `Admin@123`

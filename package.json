@@ -18,7 +18,8 @@
     "docker:down:prod": "docker compose -f docker-compose.prod.yml down",
     "db:migrate": "npm --workspace apps/backend run db:migrate",
     "db:seed": "npm --workspace apps/backend run db:seed",
-    "db:import-clinicas": "npm --workspace apps/backend run db:import-clinicas"
+    "db:import-clinicas": "npm --workspace apps/backend run db:import-clinicas",
+    "setup:local": "node scripts/setup-local.cjs"
   },
   "keywords": [],
   "author": "",
