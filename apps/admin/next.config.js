@@ -13,10 +13,21 @@ function getDistDir() {
   return ".next-build";
 }
 
+/** Destino da API no mesmo servidor (Next faz proxy — evita CORS no browser). Build/CI pode sobrescrever. */
+const adminApiProxyTarget = (process.env.ADMIN_API_PROXY_TARGET || "http://127.0.0.1:3000").replace(/\/$/, "");
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
-  distDir: getDistDir()
+  distDir: getDistDir(),
+  async rewrites() {
+    return [
+      {
+        source: "/api/v1/:path*",
+        destination: `${adminApiProxyTarget}/api/v1/:path*`
+      }
+    ];
+  }
 };
 
 module.exports = nextConfig;

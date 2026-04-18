@@ -27,7 +27,8 @@ env:
   SERVICE_NAME_ADMIN: ondeacho-admin
   REMOTE_DIR_ADMIN: /var/www/ondeacho-admin
   ADMIN_PORT: 3001
-  DEFAULT_NEXT_PUBLIC_API_URL: http://72.61.35.190:3000/api/v1
+  # Padrão do admin: /api/v1 na mesma origem (proxy no next.config.js → 127.0.0.1:3000). Override opcional via vars/secrets.
+  DEFAULT_NEXT_PUBLIC_API_URL: /api/v1
 
 jobs:
   paths:
@@ -230,18 +231,13 @@ jobs:
           elif [ -n "${FROM_SECRETS:-}" ]; then
             VAL="${FROM_SECRETS}"
             SRC="secrets.NEXT_PUBLIC_API_URL"
-          elif [ -n "${FALLBACK:-}" ]; then
+          else
             VAL="${FALLBACK}"
-            SRC="DEFAULT_NEXT_PUBLIC_API_URL (fallback)"
-          fi
-
-          if [ -z "${VAL:-}" ]; then
-            echo "::error::Defina NEXT_PUBLIC_API_URL (Variables ou Secrets) ou use o dispatch com URL."
-            exit 1
+            SRC="same-origin /api/v1 (proxy Next → API)"
           fi
 
           echo "NEXT_PUBLIC_API_URL=${VAL}" >> "$GITHUB_ENV"
-          echo "::notice::NEXT_PUBLIC_API_URL definida (origem: ${SRC})"
+          echo "::notice::NEXT_PUBLIC_API_URL=${VAL} (${SRC})"
 
       - uses: actions/setup-node@v4
         with:

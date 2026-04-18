@@ -6,19 +6,21 @@ O job **deploy-admin** do workflow único `.github/workflows/ci-deploy.yml` publ
 
 1. **Secrets** (já usados pelo deploy da API): `VPS_SSH_HOST`, `VPS_SSH_USER`, `VPS_SSH_KEY`.
 
-2. **URL da API no build** — o workflow aceita **qualquer um** destes (nessa ordem de prioridade):
-   - **Variável de repositório** `NEXT_PUBLIC_API_URL` (aba **Variables**, não Secrets): `vars.NEXT_PUBLIC_API_URL`
-   - **Secret** com o mesmo nome `NEXT_PUBLIC_API_URL` — se você criou na aba **Secrets** por engano, o workflow também lê (`secrets.NEXT_PUBLIC_API_URL`)
-   - **Run workflow** manual: campo opcional `next_public_api_url`
-   - **Fallback** no YAML: só se tudo acima estiver vazio (veja `DEFAULT_NEXT_PUBLIC_API_URL` no workflow)
+2. **`NEXT_PUBLIC_API_URL` (opcional)** — por defeito o admin usa **`/api/v1`** na mesma origem; o **Next faz proxy** para `http://127.0.0.1:3000` (veja `rewrites` em `apps/admin/next.config.js`). Assim **não depende de CORS** no browser.
 
-Use URL **com** `/api/v1`, acessível pelo navegador dos administradores. Exemplos:
-   - `https://api.seudominio.com/api/v1`
-   - `http://SEU_IP_PUBLICO:3000/api/v1`
+   Só precisa de variável/secret se a API estiver **noutro host** (ex.: `https://api.seudominio.com/api/v1`). Aí configure **também** `CORS_ORIGINS` na API com a origem do painel.
 
-Essa URL é embutida no build do Next; alterou → rode o workflow de novo.
+## Login admin em produção
 
-**Se `vars` aparecia vazio no log:** confira se o nome é exatamente `NEXT_PUBLIC_API_URL` e se está na aba **Variables** do **repositório** (ou use Secret com o mesmo nome).
+- Utilizador de exemplo no seed: **`admin@ondeacho.app`**, senha **`Admin@123`** (comentário em `apps/backend/src/database/seed.sql`).
+- Se aparecer **“Credenciais inválidas”**, a API está a responder mas o utilizador não existe ou a senha não coincide — na VPS rode o seed (ou crie o user na base):
+
+  `npm run db:seed --workspace apps/backend` (com env da base apontando para produção), ou equivalente.
+
+## HTTPS (“Não seguro”)
+
+- Aviso **“Não seguro”** é normal em **`http://IP:3001`** — não há certificado.
+- Para HTTPS, use **domínio + Nginx + Let’s Encrypt** (ou Cloudflare) na **443** com proxy para `http://127.0.0.1:3001`.
 
 ## O que fazer na VPS (primeira vez)
 

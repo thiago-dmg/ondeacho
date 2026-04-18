@@ -1,27 +1,28 @@
 import { getAdminToken } from "../lib/auth";
 
-/** Produção (VPS). Em `next dev` o padrão é API local na porta 3000. */
-const DEFAULT_API_PRODUCTION = "http://72.61.35.190:3000/api/v1";
+/** Em `next dev` o browser fala direto com a API na 3000. */
 const DEFAULT_API_DEVELOPMENT = "http://127.0.0.1:3000/api/v1";
 
 function normalizeBaseUrl(raw: string): string {
   return raw.trim().replace(/\/+$/, "");
 }
 
-function defaultApiWhenNoEnv(): string {
-  if (process.env.NODE_ENV === "development") {
-    return DEFAULT_API_DEVELOPMENT;
-  }
-  return DEFAULT_API_PRODUCTION;
-}
-
 /**
- * Base da API (inclui /api/v1). Ordem: NEXT_PUBLIC_API_URL → NEXT_PUBLIC_API_BASE_URL (legado) → padrão (local em dev, VPS em build).
+ * Base da API (inclui /api/v1).
+ * Ordem: NEXT_PUBLIC_API_URL → NEXT_PUBLIC_API_BASE_URL (legado).
+ * Em produção sem env: `/api/v1` (mesma origem; next.config.js faz proxy para a API — sem CORS).
+ * Override absoluto (ex.: API noutro host): defina NEXT_PUBLIC_API_URL e configure CORS na API.
  */
 export function getApiBaseUrl(): string {
   const fromEnv =
     process.env.NEXT_PUBLIC_API_URL?.trim() || process.env.NEXT_PUBLIC_API_BASE_URL?.trim();
-  return normalizeBaseUrl(fromEnv || defaultApiWhenNoEnv());
+  if (fromEnv) {
+    return normalizeBaseUrl(fromEnv);
+  }
+  if (process.env.NODE_ENV === "development") {
+    return normalizeBaseUrl(DEFAULT_API_DEVELOPMENT);
+  }
+  return "/api/v1";
 }
 
 const logRequests = process.env.NEXT_PUBLIC_API_LOG_REQUESTS !== "0";
