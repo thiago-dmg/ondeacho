@@ -15,115 +15,17 @@ import "../discovery/clinic_listing.dart";
 import "../discovery/discovery_provider.dart";
 import "reviews_provider.dart";
 
-/// `listingId` = parâmetro da rota `/listing/:id/reviews` (mesmo valor usado em GET `/listings/:id`).
-/// O POST `/reviews` deve enviar sempre [ClinicListing.id] vindo da API (`GET /listings/:id`), não só o texto da rota.
-class ClinicReviewsPage extends ConsumerStatefulWidget {
+/// Rota: `/listing/:id/reviews`. O `id` na URL só serve para buscar o detalhe em [clinicDetailProvider];
+/// chamadas a `/reviews/listing/...` usam apenas [ClinicListing.id] retornado por `GET /listings/:id`.
+class ClinicReviewsPage extends ConsumerWidget {
   final String listingId;
   final String clinicName;
 
   const ClinicReviewsPage({super.key, required this.listingId, required this.clinicName});
 
   @override
-  ConsumerState<ClinicReviewsPage> createState() => _ClinicReviewsPageState();
-}
-
-class _ClinicReviewsPageState extends ConsumerState<ClinicReviewsPage> {
-  int _selectedRating = 5;
-  final _commentController = TextEditingController();
-  bool _submitting = false;
-
-  @override
-  void dispose() {
-    _commentController.dispose();
-    super.dispose();
-  }
-
-  /// ID da clínica no banco: sempre o `id` do JSON de `/listings/:id`.
-  String? _resolvedClinicId(AsyncValue<ClinicListing> clinicAsync) {
-    return clinicAsync.maybeWhen(
-      data: (ClinicListing c) => c.id.trim(),
-      orElse: () => null
-    );
-  }
-
-  Future<void> _submit() async {
-    final isLoggedIn = ref.read(authStateProvider).token != null;
-    if (!isLoggedIn) {
-      if (!mounted) return;
-      context.push("/login?from=%2Flisting%2F${widget.listingId}%2Freviews");
-      return;
-    }
-    final comment = _commentController.text.trim();
-    if (comment.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Escreva um comentário sobre sua experiência."))
-      );
-      return;
-    }
-
-    final clinicAsync = ref.read(clinicDetailProvider(widget.listingId));
-    final clinicId = _resolvedClinicId(clinicAsync);
-    if (clinicId == null || clinicId.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Aguarde os dados da clínica carregarem e tente novamente."))
-      );
-      return;
-    }
-    if (!isValidUuid(clinicId)) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Identificador da clínica inválido. Volte e abra a clínica novamente."))
-      );
-      return;
-    }
-
-    setState(() => _submitting = true);
-    try {
-      if (kDebugMode) {
-        debugPrint("[OndeAcho] Sending review with clinicId: $clinicId");
-      }
-      final dio = ref.read(dioProvider);
-      await dio.post<void>(
-        "/reviews",
-        data: {
-          "clinicId": clinicId,
-          "rating": _selectedRating,
-          "comment": comment
-        }
-      );
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Avaliação enviada. Ela aparecerá após moderação."))
-      );
-      _commentController.clear();
-      ref.invalidate(clinicReviewsListProvider(clinicId));
-      ref.invalidate(reviewSummaryProvider(clinicId));
-      ref.invalidate(clinicDetailProvider(clinicId));
-    } on DioException catch (e) {
-      if (!mounted) return;
-      final msg = e.response?.data is Map
-          ? (e.response?.data["message"]?.toString() ?? "Não foi possível enviar.")
-          : "Não foi possível enviar.";
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
-    } finally {
-      if (mounted) setState(() => _submitting = false);
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final clinicAsync = ref.watch(clinicDetailProvider(widget.listingId));
-    final reviewKey = clinicAsync.maybeWhen(
-      data: (c) => c.id.trim(),
-      orElse: () => widget.listingId.trim()
-    );
-    final summaryAsync = ref.watch(reviewSummaryProvider(reviewKey));
-    final listAsync = ref.watch(clinicReviewsListProvider(reviewKey));
-    final isLoggedIn = ref.watch(authStateProvider).token != null;
-
-    final resolvedId = _resolvedClinicId(clinicAsync);
-    final clinicReady =
-        resolvedId != null && resolvedId.isNotEmpty && isValidUuid(resolvedId);
-    final canSendReview = isLoggedIn && clinicReady && !_submitting;
+  Widget build(BuildContext context, WidgetRef ref) {
+    final clinicAsync = ref.watch(clinicDetailProvider(listingId));
 
     return Scaffold(
       appBar: AppBar(
@@ -137,7 +39,7 @@ class _ClinicReviewsPageState extends ConsumerState<ClinicReviewsPage> {
               style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800, fontSize: 20)
             ),
             Text(
-              widget.clinicName,
+              clinicName,
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppColors.textSecondary)
@@ -145,230 +47,320 @@ class _ClinicReviewsPageState extends ConsumerState<ClinicReviewsPage> {
           ]
         )
       ),
-      body: ListView(
-        padding: const EdgeInsets.all(AppDim.space2),
-        children: [
-          if (clinicAsync.hasError)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 12),
+      body: clinicAsync.when(
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (e, _) => Padding(
+          padding: const EdgeInsets.all(AppDim.space2),
+          child: Text(
+            "Não foi possível carregar esta clínica. Volte e abra o card de novo.\n\n$e",
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: AppColors.attention)
+          )
+        ),
+        data: (ClinicListing clinic) {
+          final id = clinic.id.trim();
+          if (id.isEmpty || !isValidUuid(id)) {
+            return Padding(
+              padding: const EdgeInsets.all(AppDim.space2),
               child: Text(
-                "Não foi possível confirmar esta clínica no servidor. Verifique a conexão e tente abrir o detalhe de novo.",
+                "Resposta da API sem identificador de clínica válido.",
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: AppColors.attention)
               )
+            );
+          }
+          return _ClinicReviewsFormContent(clinic: clinic);
+        }
+      )
+    );
+  }
+}
+
+class _ClinicReviewsFormContent extends ConsumerStatefulWidget {
+  final ClinicListing clinic;
+
+  const _ClinicReviewsFormContent({required this.clinic});
+
+  @override
+  ConsumerState<_ClinicReviewsFormContent> createState() => _ClinicReviewsFormContentState();
+}
+
+class _ClinicReviewsFormContentState extends ConsumerState<_ClinicReviewsFormContent> {
+  int _selectedRating = 5;
+  final _commentController = TextEditingController();
+  bool _submitting = false;
+
+  String get _clinicId => widget.clinic.id.trim();
+
+  @override
+  void dispose() {
+    _commentController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _submit() async {
+    final isLoggedIn = ref.read(authStateProvider).token != null;
+    if (!isLoggedIn) {
+      if (!mounted) return;
+      context.push("/login?from=%2Flisting%2F${Uri.encodeComponent(_clinicId)}%2Freviews");
+      return;
+    }
+    final comment = _commentController.text.trim();
+    if (comment.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Escreva um comentário sobre sua experiência."))
+      );
+      return;
+    }
+    if (!isValidUuid(_clinicId)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Identificador da clínica inválido."))
+      );
+      return;
+    }
+
+    setState(() => _submitting = true);
+    try {
+      if (kDebugMode) {
+        debugPrint("[OndeAcho] Sending review with clinicId (from GET /listings): $_clinicId");
+      }
+      final dio = ref.read(dioProvider);
+      await dio.post<void>(
+        "/reviews",
+        data: {
+          "clinicId": _clinicId,
+          "rating": _selectedRating,
+          "comment": comment
+        }
+      );
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Avaliação enviada. Ela aparecerá após moderação."))
+      );
+      _commentController.clear();
+      ref.invalidate(clinicReviewsListProvider(_clinicId));
+      ref.invalidate(reviewSummaryProvider(_clinicId));
+      ref.invalidate(clinicDetailProvider(_clinicId));
+    } on DioException catch (e) {
+      if (!mounted) return;
+      final msg = e.response?.data is Map
+          ? (e.response?.data["message"]?.toString() ?? "Não foi possível enviar.")
+          : "Não foi possível enviar.";
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+    } finally {
+      if (mounted) setState(() => _submitting = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final summaryAsync = ref.watch(reviewSummaryProvider(_clinicId));
+    final listAsync = ref.watch(clinicReviewsListProvider(_clinicId));
+    final isLoggedIn = ref.watch(authStateProvider).token != null;
+    final canSendReview = isLoggedIn && !_submitting;
+
+    return ListView(
+      padding: const EdgeInsets.all(AppDim.space2),
+      children: [
+        summaryAsync.when(
+          data: (s) => Container(
+            padding: const EdgeInsets.all(AppDim.space2),
+            decoration: BoxDecoration(
+              color: AppColors.card,
+              borderRadius: BorderRadius.circular(AppDim.radiusCard),
+              border: Border.all(color: AppColors.divider),
+              boxShadow: [
+                BoxShadow(
+                  color: AppColors.shadow,
+                  blurRadius: AppDim.cardShadowBlur,
+                  offset: const Offset(0, AppDim.cardShadowY)
+                )
+              ]
             ),
-          summaryAsync.when(
-            data: (s) => Container(
-              padding: const EdgeInsets.all(AppDim.space2),
-              decoration: BoxDecoration(
-                color: AppColors.card,
-                borderRadius: BorderRadius.circular(AppDim.radiusCard),
-                border: Border.all(color: AppColors.divider),
-                boxShadow: [
-                  BoxShadow(
-                    color: AppColors.shadow,
-                    blurRadius: AppDim.cardShadowBlur,
-                    offset: const Offset(0, AppDim.cardShadowY)
-                  )
-                ]
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    "Resumo na comunidade",
-                    style: Theme.of(context).textTheme.titleMedium
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  "Resumo na comunidade",
+                  style: Theme.of(context).textTheme.titleMedium
+                ),
+                const SizedBox(height: 12),
+                if (s.averageRating != null && s.reviewCount > 0) ...[
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Text(
+                        s.averageRating!.toStringAsFixed(1),
+                        style: Theme.of(context).textTheme.displaySmall?.copyWith(
+                              fontSize: 40,
+                              fontWeight: FontWeight.w800,
+                              color: AppColors.primary
+                            )
+                      ),
+                      const SizedBox(width: 12),
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 6),
+                        child: AppRatingStars(value: s.averageRating!, size: 26)
+                      )
+                    ]
                   ),
-                  const SizedBox(height: 12),
-                  if (s.averageRating != null && s.reviewCount > 0) ...[
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        Text(
-                          s.averageRating!.toStringAsFixed(1),
-                          style: Theme.of(context).textTheme.displaySmall?.copyWith(
-                                fontSize: 40,
-                                fontWeight: FontWeight.w800,
-                                color: AppColors.primary
-                              )
-                        ),
-                        const SizedBox(width: 12),
-                        Padding(
-                          padding: const EdgeInsets.only(bottom: 6),
-                          child: AppRatingStars(value: s.averageRating!, size: 26)
+                  const SizedBox(height: 8),
+                  Text(
+                    "${s.reviewCount} avaliações publicadas",
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: AppColors.textSecondary)
+                  )
+                ] else
+                  Row(
+                    children: [
+                      const LIcon(LucideIcons.info, color: AppColors.attention, size: LucideSize.lg),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          "Ainda não há avaliações publicadas. Seja a primeira família a contribuir.",
+                          style: Theme.of(context).textTheme.bodyMedium
                         )
-                      ]
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      "${s.reviewCount} avaliações publicadas",
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: AppColors.textSecondary)
-                    )
-                  ] else
-                    Row(
-                      children: [
-                        const LIcon(LucideIcons.info, color: AppColors.attention, size: LucideSize.lg),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            "Ainda não há avaliações publicadas. Seja a primeira família a contribuir.",
-                            style: Theme.of(context).textTheme.bodyMedium
-                          )
-                        )
-                      ]
-                    )
-                ]
-              )
-            ),
-            loading: () => const Padding(
-              padding: EdgeInsets.all(24),
-              child: Center(child: CircularProgressIndicator())
-            ),
-            error: (e, _) => Text("Erro ao carregar resumo: $e")
+                      )
+                    ]
+                  )
+              ]
+            )
           ),
-          const SizedBox(height: AppDim.space3),
+          loading: () => const Padding(
+            padding: EdgeInsets.all(24),
+            child: Center(child: CircularProgressIndicator())
+          ),
+          error: (e, _) => Text("Erro ao carregar resumo: $e")
+        ),
+        const SizedBox(height: AppDim.space3),
+        Text(
+          "Sua avaliação",
+          style: Theme.of(context).textTheme.titleMedium
+        ),
+        const SizedBox(height: 8),
+        Text(
+          "Sua opinião ajuda outras famílias a escolherem com mais segurança.",
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppColors.textSecondary)
+        ),
+        const SizedBox(height: 12),
+        if (!isLoggedIn)
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: AppColors.neutralBadgeBg,
+              borderRadius: BorderRadius.circular(12)
+            ),
+            child: Text(
+              "Entre na conta para enviar sua avaliação.",
+              style: Theme.of(context).textTheme.bodyMedium
+            )
+          )
+        else ...[
           Text(
-            "Sua avaliação",
-            style: Theme.of(context).textTheme.titleMedium
+            "Toque nas estrelas",
+            style: Theme.of(context).textTheme.labelLarge?.copyWith(color: AppColors.textSecondary)
+          ),
+          const SizedBox(height: 8),
+          AppInteractiveStars(
+            value: _selectedRating,
+            size: 36,
+            onChanged: (v) => setState(() => _selectedRating = v)
+          ),
+          const SizedBox(height: 16),
+          TextField(
+            controller: _commentController,
+            maxLines: 4,
+            decoration: const InputDecoration(
+              labelText: "Comentário",
+              hintText: "Conte como foi o atendimento, o acolhimento e o que mais importou para você",
+              alignLabelWithHint: true
+            )
+          ),
+          const SizedBox(height: 12),
+          FilledButton(
+            onPressed: canSendReview ? _submit : null,
+            child: Text(_submitting ? "Enviando..." : "Enviar avaliação")
           ),
           const SizedBox(height: 8),
           Text(
-            "Sua opinião ajuda outras famílias a escolherem com mais segurança.",
+            "As avaliações passam por moderação para manter respeito e confiabilidade.",
             style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppColors.textSecondary)
-          ),
-          const SizedBox(height: 12),
-          if (!isLoggedIn)
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: AppColors.neutralBadgeBg,
-                borderRadius: BorderRadius.circular(12)
-              ),
-              child: Text(
-                "Entre na conta para enviar sua avaliação.",
-                style: Theme.of(context).textTheme.bodyMedium
-              )
-            )
-          else ...[
-            if (isLoggedIn && !clinicReady && clinicAsync.isLoading)
-              const Padding(
-                padding: EdgeInsets.only(bottom: 8),
-                child: Text("Carregando dados da clínica…", style: TextStyle(color: AppColors.textSecondary)),
-              ),
-            Text(
-              "Toque nas estrelas",
-              style: Theme.of(context).textTheme.labelLarge?.copyWith(color: AppColors.textSecondary)
-            ),
-            const SizedBox(height: 8),
-            AppInteractiveStars(
-              value: _selectedRating,
-              size: 36,
-              onChanged: (v) {
-                if (!clinicReady) {
-                  return;
-                }
-                setState(() => _selectedRating = v);
-              }
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: _commentController,
-              maxLines: 4,
-              enabled: clinicReady,
-              decoration: const InputDecoration(
-                labelText: "Comentário",
-                hintText: "Conte como foi o atendimento, o acolhimento e o que mais importou para você",
-                alignLabelWithHint: true
-              )
-            ),
-            const SizedBox(height: 12),
-            FilledButton(
-              onPressed: canSendReview ? _submit : null,
-              child: Text(_submitting ? "Enviando..." : "Enviar avaliação")
-            ),
-            const SizedBox(height: 8),
-            Text(
-              "As avaliações passam por moderação para manter respeito e confiabilidade.",
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppColors.textSecondary)
-            )
-          ],
-          const SizedBox(height: AppDim.space3),
-          Text(
-            "Comentários publicados",
-            style: Theme.of(context).textTheme.titleMedium
-          ),
-          const SizedBox(height: 12),
-          listAsync.when(
-            data: (items) {
-              if (items.isEmpty) {
-                return Text(
-                  "Nenhuma avaliação publicada ainda.",
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: AppColors.textSecondary)
-                );
-              }
-              return Column(
-                children: items
-                    .map(
-                      (r) => Padding(
-                        padding: const EdgeInsets.only(bottom: 12),
-                        child: Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.all(AppDim.space2),
-                          decoration: BoxDecoration(
-                            color: AppColors.card,
-                            borderRadius: BorderRadius.circular(AppDim.radiusCard),
-                            border: Border.all(color: AppColors.divider),
-                            boxShadow: [
-                              BoxShadow(
-                                color: AppColors.shadow,
-                                blurRadius: 8,
-                                offset: const Offset(0, 2)
-                              )
-                            ]
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                children: [
-                                  CircleAvatar(
-                                    radius: 18,
-                                    backgroundColor: AppColors.accent.withValues(alpha: 0.12),
-                                    child: Text(
-                                      r.authorName.isNotEmpty ? r.authorName[0].toUpperCase() : "?",
-                                      style: TextStyle(
-                                        fontWeight: FontWeight.w700,
-                                        color: AppColors.accent
-                                      )
+          )
+        ],
+        const SizedBox(height: AppDim.space3),
+        Text(
+          "Comentários publicados",
+          style: Theme.of(context).textTheme.titleMedium
+        ),
+        const SizedBox(height: 12),
+        listAsync.when(
+          data: (items) {
+            if (items.isEmpty) {
+              return Text(
+                "Nenhuma avaliação publicada ainda.",
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: AppColors.textSecondary)
+              );
+            }
+            return Column(
+              children: items
+                  .map(
+                    (r) => Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(AppDim.space2),
+                        decoration: BoxDecoration(
+                          color: AppColors.card,
+                          borderRadius: BorderRadius.circular(AppDim.radiusCard),
+                          border: Border.all(color: AppColors.divider),
+                          boxShadow: [
+                            BoxShadow(
+                              color: AppColors.shadow,
+                              blurRadius: 8,
+                              offset: const Offset(0, 2)
+                            )
+                          ]
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                CircleAvatar(
+                                  radius: 18,
+                                  backgroundColor: AppColors.accent.withValues(alpha: 0.12),
+                                  child: Text(
+                                    r.authorName.isNotEmpty ? r.authorName[0].toUpperCase() : "?",
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.w700,
+                                      color: AppColors.accent
                                     )
-                                  ),
-                                  const SizedBox(width: 10),
-                                  Expanded(
-                                    child: Text(
-                                      r.authorName,
-                                      style: Theme.of(context).textTheme.titleSmall
-                                    )
-                                  ),
-                                  AppRatingStars(value: r.rating.toDouble(), size: 18)
-                                ]
-                              ),
-                              const SizedBox(height: 12),
-                              Text(
-                                r.comment,
-                                style: Theme.of(context).textTheme.bodyMedium?.copyWith(height: 1.5)
-                              )
-                            ]
-                          )
+                                  )
+                                ),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: Text(
+                                    r.authorName,
+                                    style: Theme.of(context).textTheme.titleSmall
+                                  )
+                                ),
+                                AppRatingStars(value: r.rating.toDouble(), size: 18)
+                              ]
+                            ),
+                            const SizedBox(height: 12),
+                            Text(
+                              r.comment,
+                              style: Theme.of(context).textTheme.bodyMedium?.copyWith(height: 1.5)
+                            )
+                          ]
                         )
                       )
                     )
-                    .toList()
-              );
-            },
-            loading: () => const Center(child: Padding(padding: EdgeInsets.all(16), child: CircularProgressIndicator())),
-            error: (e, _) => Text("Erro: $e")
-          )
-        ]
-      )
+                  )
+                  .toList()
+            );
+          },
+          loading: () => const Center(child: Padding(padding: EdgeInsets.all(16), child: CircularProgressIndicator())),
+          error: (e, _) => Text("Erro: $e")
+        )
+      ]
     );
   }
 }
