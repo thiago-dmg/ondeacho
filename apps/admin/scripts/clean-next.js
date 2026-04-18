@@ -1,12 +1,12 @@
 /**
- * Remove a pasta de build do Next antes do `next build`.
- * Tenta algumas vezes (Windows às vezes libera o lock após um atraso).
- * Feche `next dev` / preview antes do build.
+ * Remove pastas de build do Next antes do npm run build.
  */
 const fs = require("fs");
 const path = require("path");
+const os = require("os");
 
-const root = path.join(__dirname, "..");
+const adminDir = path.join(__dirname, "..");
+const repoRoot = path.join(adminDir, "..", "..");
 
 function sleepSync(ms) {
   try {
@@ -20,7 +20,7 @@ function sleepSync(ms) {
   } catch {
     const end = Date.now() + ms;
     while (Date.now() < end) {
-      /* espera grosseira se powershell/sleep falhar */
+      /* fallback */
     }
   }
 }
@@ -41,17 +41,22 @@ function rmWithRetries(dir, label) {
       } else {
         // eslint-disable-next-line no-console
         console.warn(`[admin] Não foi possível remover ${label}: ${err.message}`);
-        // eslint-disable-next-line no-console
-        console.warn("[admin] Feche o 'npm run dev', o editor na pasta de build e tente de novo.");
       }
     }
   }
 }
 
-const dirs = [
-  [path.join(root, ".next-build"), ".next-build"],
-  [path.join(root, ".next"), ".next (legado)"]
-];
+const dirs = [];
+
+if (process.env.ONDEACHO_ADMIN_DIST_DIR) {
+  dirs.push([path.resolve(adminDir, process.env.ONDEACHO_ADMIN_DIST_DIR), "ONDEACHO_ADMIN_DIST_DIR"]);
+} else if (process.platform === "win32") {
+  dirs.push([path.join(repoRoot, ".admin-next-build"), ".admin-next-build na raiz do repo (Win)"]);
+}
+
+dirs.push([path.join(adminDir, ".next-build"), ".next-build (legado em apps/admin)"]);
+dirs.push([path.join(adminDir, ".next"), ".next (legado)"]);
+dirs.push([path.join(os.tmpdir(), "ondeacho-admin-next-build"), "temp legado"]);
 
 for (const [full, label] of dirs) {
   rmWithRetries(full, label);

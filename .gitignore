@@ -9,3 +9,4 @@ dist/
 .vscode/
 .next/
 .next-build/
+.admin-next-build/
