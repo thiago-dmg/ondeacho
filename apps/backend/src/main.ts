@@ -2,6 +2,7 @@ import { ValidationPipe } from "@nestjs/common";
 import { NestFactory } from "@nestjs/core";
 import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
 import { NextFunction, Request, Response } from "express";
+import { AllExceptionsFilter } from "./common/filters/all-exceptions.filter";
 import { AppModule } from "./modules/app.module";
 
 async function bootstrap() {
@@ -48,6 +49,7 @@ async function bootstrap() {
   });
 
   app.setGlobalPrefix("api/v1");
+  app.useGlobalFilters(new AllExceptionsFilter());
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
