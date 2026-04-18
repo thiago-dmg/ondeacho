@@ -1,6 +1,6 @@
 # Deploy do admin na VPS (GitHub Actions)
 
-O workflow `.github/workflows/deploy-admin-vps.yml` publica o Next.js em `/var/www/ondeacho-admin` e sobe o serviço systemd `ondeacho-admin` na porta **3001** (localhost).
+O job **deploy-admin** do workflow único `.github/workflows/ci-deploy.yml` publica o Next.js em `/var/www/ondeacho-admin` e sobe o serviço systemd `ondeacho-admin` na porta **3001** (localhost). Esse job só corre em `main`/`master` quando há alterações em `apps/admin/**` ou no próprio `ci-deploy.yml` (ou em execução manual *workflow_dispatch*).
 
 ## O que configurar no GitHub (uma vez)
 
