@@ -1,9 +1,9 @@
--- Senhas de demonstração (hash bcrypt abaixo): Admin@123 — contas admin@ondeacho.app e responsavel@ondeacho.app
+-- Senhas de demonstração: Admin@123 — contas admin@ondeacho.app e responsavel@ondeacho.app (bcrypt cost 10)
 -- Usuários base
 INSERT INTO users (name, email, password_hash, role)
 VALUES
-  ('Administrador OndeAcho', 'admin@ondeacho.app', '$2b$10$1dVtUQAHNX9p4d6MVKDvaOv3JsfLXIrWhborxi6fnXisaMglRw7q.', 'admin'),
-  ('Responsável Exemplo', 'responsavel@ondeacho.app', '$2b$10$1dVtUQAHNX9p4d6MVKDvaOv3JsfLXIrWhborxi6fnXisaMglRw7q.', 'responsavel')
+  ('Administrador OndeAcho', 'admin@ondeacho.app', '$2b$10$7FJp9pmUYCGjb3VeqAYXiOBWGGtQgLVHqFqCHrzL01KXZl9n6PCum', 'admin'),
+  ('Responsável Exemplo', 'responsavel@ondeacho.app', '$2b$10$7FJp9pmUYCGjb3VeqAYXiOBWGGtQgLVHqFqCHrzL01KXZl9n6PCum', 'responsavel')
 ON CONFLICT (email) DO NOTHING;
 
 -- Especialidades
