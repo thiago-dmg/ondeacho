@@ -61,7 +61,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: "/listing/:id/reviews",
         builder: (context, state) => ClinicReviewsPage(
-          clinicId: state.pathParameters["id"] ?? "",
+          listingId: state.pathParameters["id"] ?? "",
           clinicName: state.uri.queryParameters["name"] ?? "Clínica"
         )
       ),

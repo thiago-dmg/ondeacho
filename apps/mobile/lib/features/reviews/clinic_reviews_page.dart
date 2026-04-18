@@ -1,22 +1,27 @@
 import "package:dio/dio.dart";
+import "package:flutter/foundation.dart";
 import "package:flutter/material.dart";
 import "package:flutter_riverpod/flutter_riverpod.dart";
 import "package:go_router/go_router.dart";
 import "package:lucide_icons/lucide_icons.dart";
 import "../../core/network/api_client.dart";
+import "../../core/utils/uuid.dart";
 import "../../core/widgets/lucide_icon.dart";
 import "../../core/theme/app_colors.dart";
 import "../../core/theme/app_dimensions.dart";
 import "../../core/widgets/app_rating_stars.dart";
 import "../auth/auth_state.dart";
+import "../discovery/clinic_listing.dart";
 import "../discovery/discovery_provider.dart";
 import "reviews_provider.dart";
 
+/// `listingId` = parâmetro da rota `/listing/:id/reviews` (mesmo valor usado em GET `/listings/:id`).
+/// O POST `/reviews` deve enviar sempre [ClinicListing.id] vindo da API (`GET /listings/:id`), não só o texto da rota.
 class ClinicReviewsPage extends ConsumerStatefulWidget {
-  final String clinicId;
+  final String listingId;
   final String clinicName;
 
-  const ClinicReviewsPage({super.key, required this.clinicId, required this.clinicName});
+  const ClinicReviewsPage({super.key, required this.listingId, required this.clinicName});
 
   @override
   ConsumerState<ClinicReviewsPage> createState() => _ClinicReviewsPageState();
@@ -33,11 +38,19 @@ class _ClinicReviewsPageState extends ConsumerState<ClinicReviewsPage> {
     super.dispose();
   }
 
+  /// ID da clínica no banco: sempre o `id` do JSON de `/listings/:id`.
+  String? _resolvedClinicId(AsyncValue<ClinicListing> clinicAsync) {
+    return clinicAsync.maybeWhen(
+      data: (ClinicListing c) => c.id.trim(),
+      orElse: () => null
+    );
+  }
+
   Future<void> _submit() async {
     final isLoggedIn = ref.read(authStateProvider).token != null;
     if (!isLoggedIn) {
       if (!mounted) return;
-      context.push("/login?from=%2Flisting%2F${widget.clinicId}%2Freviews");
+      context.push("/login?from=%2Flisting%2F${widget.listingId}%2Freviews");
       return;
     }
     final comment = _commentController.text.trim();
@@ -47,13 +60,32 @@ class _ClinicReviewsPageState extends ConsumerState<ClinicReviewsPage> {
       );
       return;
     }
+
+    final clinicAsync = ref.read(clinicDetailProvider(widget.listingId));
+    final clinicId = _resolvedClinicId(clinicAsync);
+    if (clinicId == null || clinicId.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Aguarde os dados da clínica carregarem e tente novamente."))
+      );
+      return;
+    }
+    if (!isValidUuid(clinicId)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Identificador da clínica inválido. Volte e abra a clínica novamente."))
+      );
+      return;
+    }
+
     setState(() => _submitting = true);
     try {
+      if (kDebugMode) {
+        debugPrint("[OndeAcho] Sending review with clinicId: $clinicId");
+      }
       final dio = ref.read(dioProvider);
       await dio.post<void>(
         "/reviews",
         data: {
-          "clinicId": widget.clinicId,
+          "clinicId": clinicId,
           "rating": _selectedRating,
           "comment": comment
         }
@@ -63,9 +95,9 @@ class _ClinicReviewsPageState extends ConsumerState<ClinicReviewsPage> {
         const SnackBar(content: Text("Avaliação enviada. Ela aparecerá após moderação."))
       );
       _commentController.clear();
-      ref.invalidate(clinicReviewsListProvider(widget.clinicId));
-      ref.invalidate(reviewSummaryProvider(widget.clinicId));
-      ref.invalidate(clinicDetailProvider(widget.clinicId));
+      ref.invalidate(clinicReviewsListProvider(clinicId));
+      ref.invalidate(reviewSummaryProvider(clinicId));
+      ref.invalidate(clinicDetailProvider(clinicId));
     } on DioException catch (e) {
       if (!mounted) return;
       final msg = e.response?.data is Map
@@ -79,9 +111,19 @@ class _ClinicReviewsPageState extends ConsumerState<ClinicReviewsPage> {
 
   @override
   Widget build(BuildContext context) {
-    final summaryAsync = ref.watch(reviewSummaryProvider(widget.clinicId));
-    final listAsync = ref.watch(clinicReviewsListProvider(widget.clinicId));
+    final clinicAsync = ref.watch(clinicDetailProvider(widget.listingId));
+    final reviewKey = clinicAsync.maybeWhen(
+      data: (c) => c.id.trim(),
+      orElse: () => widget.listingId.trim()
+    );
+    final summaryAsync = ref.watch(reviewSummaryProvider(reviewKey));
+    final listAsync = ref.watch(clinicReviewsListProvider(reviewKey));
     final isLoggedIn = ref.watch(authStateProvider).token != null;
+
+    final resolvedId = _resolvedClinicId(clinicAsync);
+    final clinicReady =
+        resolvedId != null && resolvedId.isNotEmpty && isValidUuid(resolvedId);
+    final canSendReview = isLoggedIn && clinicReady && !_submitting;
 
     return Scaffold(
       appBar: AppBar(
@@ -106,6 +148,14 @@ class _ClinicReviewsPageState extends ConsumerState<ClinicReviewsPage> {
       body: ListView(
         padding: const EdgeInsets.all(AppDim.space2),
         children: [
+          if (clinicAsync.hasError)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: Text(
+                "Não foi possível confirmar esta clínica no servidor. Verifique a conexão e tente abrir o detalhe de novo.",
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: AppColors.attention)
+              )
+            ),
           summaryAsync.when(
             data: (s) => Container(
               padding: const EdgeInsets.all(AppDim.space2),
@@ -199,6 +249,11 @@ class _ClinicReviewsPageState extends ConsumerState<ClinicReviewsPage> {
               )
             )
           else ...[
+            if (isLoggedIn && !clinicReady && clinicAsync.isLoading)
+              const Padding(
+                padding: EdgeInsets.only(bottom: 8),
+                child: Text("Carregando dados da clínica…", style: TextStyle(color: AppColors.textSecondary)),
+              ),
             Text(
               "Toque nas estrelas",
               style: Theme.of(context).textTheme.labelLarge?.copyWith(color: AppColors.textSecondary)
@@ -207,12 +262,18 @@ class _ClinicReviewsPageState extends ConsumerState<ClinicReviewsPage> {
             AppInteractiveStars(
               value: _selectedRating,
               size: 36,
-              onChanged: (v) => setState(() => _selectedRating = v)
+              onChanged: (v) {
+                if (!clinicReady) {
+                  return;
+                }
+                setState(() => _selectedRating = v);
+              }
             ),
             const SizedBox(height: 16),
             TextField(
               controller: _commentController,
               maxLines: 4,
+              enabled: clinicReady,
               decoration: const InputDecoration(
                 labelText: "Comentário",
                 hintText: "Conte como foi o atendimento, o acolhimento e o que mais importou para você",
@@ -221,7 +282,7 @@ class _ClinicReviewsPageState extends ConsumerState<ClinicReviewsPage> {
             ),
             const SizedBox(height: 12),
             FilledButton(
-              onPressed: _submitting ? null : _submit,
+              onPressed: canSendReview ? _submit : null,
               child: Text(_submitting ? "Enviando..." : "Enviar avaliação")
             ),
             const SizedBox(height: 8),
