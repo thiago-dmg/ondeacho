@@ -6,13 +6,19 @@ O workflow `.github/workflows/deploy-admin-vps.yml` publica o Next.js em `/var/w
 
 1. **Secrets** (já usados pelo deploy da API): `VPS_SSH_HOST`, `VPS_SSH_USER`, `VPS_SSH_KEY`.
 
-2. **Variável** (Settings → Secrets and variables → Actions → **Variables**):
-   - `NEXT_PUBLIC_API_URL` — URL base da API **com** `/api/v1`, acessível pelo **navegador** dos administradores.
-   - Exemplos:
-     - `https://api.seudominio.com/api/v1`
-     - `http://SEU_IP_PUBLICO:3000/api/v1` (sem HTTPS até colocar certificado na API)
+2. **URL da API no build** — o workflow aceita **qualquer um** destes (nessa ordem de prioridade):
+   - **Variável de repositório** `NEXT_PUBLIC_API_URL` (aba **Variables**, não Secrets): `vars.NEXT_PUBLIC_API_URL`
+   - **Secret** com o mesmo nome `NEXT_PUBLIC_API_URL` — se você criou na aba **Secrets** por engano, o workflow também lê (`secrets.NEXT_PUBLIC_API_URL`)
+   - **Run workflow** manual: campo opcional `next_public_api_url`
+   - **Fallback** no YAML: só se tudo acima estiver vazio (veja `DEFAULT_NEXT_PUBLIC_API_URL` no workflow)
 
-Essa variável é embutida no build do Next; alterou URL → rode o workflow de novo.
+Use URL **com** `/api/v1`, acessível pelo navegador dos administradores. Exemplos:
+   - `https://api.seudominio.com/api/v1`
+   - `http://SEU_IP_PUBLICO:3000/api/v1`
+
+Essa URL é embutida no build do Next; alterou → rode o workflow de novo.
+
+**Se `vars` aparecia vazio no log:** confira se o nome é exatamente `NEXT_PUBLIC_API_URL` e se está na aba **Variables** do **repositório** (ou use Secret com o mesmo nome).
 
 ## O que fazer na VPS (primeira vez)
 

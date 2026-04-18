@@ -1,7 +1,14 @@
 # Deploy do painel Next.js (apps/admin) para a mesma VPS da API — releases + systemd.
 # Requer os mesmos secrets SSH da API: VPS_SSH_HOST, VPS_SSH_USER, VPS_SSH_KEY
-# Variável do repositório (Settings → Actions → Variables): NEXT_PUBLIC_API_URL
-# Ex.: https://api.seudominio.com/api/v1  ou  http://IP_DA_VPS:3000/api/v1
+#
+# URL da API no build (NEXT_PUBLIC_*):
+#   1) Repository Variable ou Organization Variable: NEXT_PUBLIC_API_URL (vars.NEXT_PUBLIC_API_URL)
+#   2) Ou Secret com o mesmo nome (secrets.NEXT_PUBLIC_API_URL) — comum quando se cria em "Secrets"
+#   3) workflow_dispatch: campo opcional "next_public_api_url"
+#   4) Fallback (último recurso): DEFAULT_NEXT_PUBLIC_API_URL abaixo
+#
+# Nota: "Repository variables" ficam em Settings → Actions → Variables (aba Variables, não Secrets).
+# Se a URL foi criada como Secret, use secrets.NEXT_PUBLIC_API_URL — o step "Resolve" tenta os dois.
 name: Deploy Admin to VPS
 
 on:
@@ -11,11 +18,19 @@ on:
       - "apps/admin/**"
       - ".github/workflows/deploy-admin-vps.yml"
   workflow_dispatch:
+    inputs:
+      next_public_api_url:
+        description: "Sobrescreve a URL da API (opcional). Ex.: http://IP:3000/api/v1"
+        required: false
+        type: string
+        default: ""
 
 env:
   SERVICE_NAME: ondeacho-admin
   REMOTE_DIR: /var/www/ondeacho-admin
   ADMIN_PORT: 3001
+  # Usado só se vars, secrets e input estiverem vazios (URL pública).
+  DEFAULT_NEXT_PUBLIC_API_URL: http://72.61.35.190:3000/api/v1
 
 jobs:
   deploy:
@@ -25,14 +40,45 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Check NEXT_PUBLIC_API_URL
+      - name: Resolve NEXT_PUBLIC_API_URL
+        id: resolve_api
         env:
-          NEXT_PUBLIC_API_URL: ${{ vars.NEXT_PUBLIC_API_URL }}
+          # Repositório / org (aba Variables)
+          FROM_VARS: ${{ vars.NEXT_PUBLIC_API_URL }}
+          # Muitos times colocam a URL em Secrets com o mesmo nome
+          FROM_SECRETS: ${{ secrets.NEXT_PUBLIC_API_URL }}
+          # Dispatch manual (opcional)
+          FROM_INPUT: ${{ github.event.inputs.next_public_api_url || '' }}
+          FALLBACK: ${{ env.DEFAULT_NEXT_PUBLIC_API_URL }}
         run: |
-          if [ -z "${NEXT_PUBLIC_API_URL:-}" ]; then
-            echo "::error::Defina a variável NEXT_PUBLIC_API_URL no repositório (Settings → Secrets and variables → Actions → Variables). Ex.: https://api.seudominio.com/api/v1"
+          set -euo pipefail
+          VAL=""
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ -n "${FROM_INPUT:-}" ]; then
+            VAL="${FROM_INPUT}"
+            SRC="workflow_dispatch input"
+          elif [ -n "${FROM_VARS:-}" ]; then
+            VAL="${FROM_VARS}"
+            SRC="vars.NEXT_PUBLIC_API_URL"
+          elif [ -n "${FROM_SECRETS:-}" ]; then
+            VAL="${FROM_SECRETS}"
+            SRC="secrets.NEXT_PUBLIC_API_URL"
+          elif [ -n "${FALLBACK:-}" ]; then
+            VAL="${FALLBACK}"
+            SRC="DEFAULT_NEXT_PUBLIC_API_URL (fallback do workflow)"
+          fi
+
+          if [ -z "${VAL:-}" ]; then
+            echo "::error::Não foi possível obter NEXT_PUBLIC_API_URL. Crie em Settings → Actions → Variables OU Secrets com o nome NEXT_PUBLIC_API_URL, ou use o dispatch com o campo opcional."
             exit 1
           fi
+
+          {
+            echo "NEXT_PUBLIC_API_URL=${VAL}"
+          } >> "$GITHUB_ENV"
+
+          LEN=${#VAL}
+          echo "::notice::NEXT_PUBLIC_API_URL carregada via ${SRC} (comprimento=${LEN})"
+          echo "resolved_source=${SRC}" >> "$GITHUB_OUTPUT"
 
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -45,7 +91,6 @@ jobs:
 
       - name: Build admin
         env:
-          NEXT_PUBLIC_API_URL: ${{ vars.NEXT_PUBLIC_API_URL }}
           NODE_ENV: production
         run: npm run build --workspace apps/admin
 
