@@ -1,5 +1,6 @@
 import "package:flutter_riverpod/flutter_riverpod.dart";
 import "package:go_router/go_router.dart";
+import "auth_redirect.dart";
 import "../../features/auth/login_page.dart";
 import "../../features/auth/profile_page.dart";
 import "../../features/auth/auth_state.dart";
@@ -33,11 +34,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       }
 
       if (loggedIn && inAuth) {
-        final from = state.uri.queryParameters["from"];
-        if (from != null && from.isNotEmpty) {
-          return Uri.decodeComponent(from);
+        if (inRegister) {
+          return "/discovery";
         }
-        return "/discovery";
+        final from = state.uri.queryParameters["from"];
+        return postAuthLocation(fromQuery: from, wasRegister: false);
       }
 
       return null;

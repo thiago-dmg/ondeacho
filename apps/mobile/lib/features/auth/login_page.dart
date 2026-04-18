@@ -1,6 +1,7 @@
 import "package:flutter/material.dart";
 import "package:flutter_riverpod/flutter_riverpod.dart";
 import "package:go_router/go_router.dart";
+import "../../core/routing/auth_redirect.dart";
 import "../../core/theme/app_colors.dart";
 import "../../core/theme/app_dimensions.dart";
 import "auth_state.dart";
@@ -43,18 +44,10 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     super.dispose();
   }
 
-  /// Após **cadastro**, sempre a home. Após **login**, respeita `?from=` (ex.: favoritos).
+  /// Após **cadastro** ou **login**, home por padrão; `?from=` só quando não é o atalho do ícone de conta (`/profile`).
   void _goAfterSuccess({required bool wasRegister}) {
-    if (wasRegister) {
-      context.go("/discovery");
-      return;
-    }
     final from = GoRouterState.of(context).uri.queryParameters["from"];
-    if (from != null && from.isNotEmpty) {
-      context.go(Uri.decodeComponent(from));
-    } else {
-      context.go("/discovery");
-    }
+    context.go(postAuthLocation(fromQuery: from, wasRegister: wasRegister));
   }
 
   Uri _registerUri() {
