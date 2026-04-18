@@ -53,8 +53,8 @@ sleepSync(6);
 let lastErr;
 for (let i = 0; i < 5; i++) {
   try {
-    run("npm run db:migrate");
-    run("npm run db:seed");
+    run("npm run db:migrate:dev --workspace apps/backend");
+    run("npm run db:seed:dev --workspace apps/backend");
     // eslint-disable-next-line no-console
     console.log(
       "\n[OndeAcho] Banco pronto. Contas demo: admin@ondeacho.app / Admin@123 (admin)\n" +

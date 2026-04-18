@@ -17,11 +17,13 @@ npm install
 npm run docker:up
 ```
 
-Depois aplique schema e seed:
+Depois compile o backend, aplique schema e seed:
 ```bash
+npm run build --workspace apps/backend
 npm run db:migrate
 npm run db:seed
 ```
+(Em desenvolvimento podes usar `npm run db:migrate:dev --workspace apps/backend` sem build.)
 
 Swagger: [http://localhost:3000/docs](http://localhost:3000/docs)
 Health: [http://localhost:3000/api/v1/health](http://localhost:3000/api/v1/health) e [http://localhost:3000/api/v1/health/ready](http://localhost:3000/api/v1/health/ready)
@@ -41,7 +43,7 @@ O admin em `next dev` usa `apps/admin/.env.development` e aponta para `http://12
 
 ## Rodar sem Docker (Postgres já instalado)
 1. Copie `apps/backend/.env.example` para `apps/backend/.env` e ajuste `DB_*`.
-2. `npm run db:migrate` e `npm run db:seed`
+2. `npm run build --workspace apps/backend`, depois `npm run db:migrate` e `npm run db:seed` (ou `db:migrate:dev` / `db:seed:dev` no workspace backend sem build).
 3. `npm run dev:backend` e `npm run dev:admin`
 
 ## Credenciais seed
@@ -51,6 +53,7 @@ O admin em `next dev` usa `apps/admin/.env.development` e aponta para `http://12
 ## Produção com Docker
 ```bash
 npm run docker:up:prod
+npm run build --workspace apps/backend
 npm run db:migrate
 npm run db:seed
 ```

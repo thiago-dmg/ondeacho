@@ -15,7 +15,7 @@ O job **deploy-admin** do workflow único `.github/workflows/ci-deploy.yml` publ
 - Utilizador de exemplo no seed: **`admin@ondeacho.app`**, senha **`Admin@123`** (comentário em `apps/backend/src/database/seed.sql`).
 - Se aparecer **“Credenciais inválidas”**, a API está a responder mas o utilizador não existe ou a senha não coincide — na VPS rode o seed (ou crie o user na base):
 
-  `npm run db:seed --workspace apps/backend` (com env da base apontando para produção), ou equivalente.
+  `npm run db:seed --workspace apps/backend` (com env da base; ex.: `set -a && source /etc/ondeacho-api.env && set -a`). O `db:migrate` / `db:seed` em produção usam `node dist/...` — é preciso **build do backend** no artefacto (o deploy da API já inclui isso).
 
 ## HTTPS (“Não seguro”)
 
