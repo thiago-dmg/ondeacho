@@ -3,7 +3,6 @@ import "package:go_router/go_router.dart";
 import "../../features/auth/login_page.dart";
 import "../../features/auth/profile_page.dart";
 import "../../features/auth/auth_state.dart";
-import "../../features/contacts/my_contacts_page.dart";
 import "../../features/collaboration/edit_owned_clinic_page.dart";
 import "../../features/collaboration/profile_claim_page.dart";
 import "../../features/collaboration/suggest_clinic_page.dart";
@@ -15,7 +14,7 @@ import "../../features/reviews/clinic_reviews_page.dart";
 /// O [GoRouter] não pode ser recriado a cada mudança em [AuthState] (ex.: `clearError`),
 /// senão a pilha volta para [initialLocation] e a tela de login/cadastro “some”.
 final appRouterProvider = Provider<GoRouter>((ref) {
-  const privateRoutes = {"/favorites", "/my-contacts", "/profile"};
+  const privateRoutes = {"/favorites", "/profile"};
 
   final router = GoRouter(
     initialLocation: "/discovery",
@@ -62,10 +61,6 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: "/favorites",
         builder: (context, state) => const FavoritesPage()
-      ),
-      GoRoute(
-        path: "/my-contacts",
-        builder: (context, state) => const MyContactsPage()
       ),
       GoRoute(
         path: "/profile",

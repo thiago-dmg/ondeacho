@@ -43,7 +43,12 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     super.dispose();
   }
 
-  void _goAfterSuccess() {
+  /// Após **cadastro**, sempre a home. Após **login**, respeita `?from=` (ex.: favoritos).
+  void _goAfterSuccess({required bool wasRegister}) {
+    if (wasRegister) {
+      context.go("/discovery");
+      return;
+    }
     final from = GoRouterState.of(context).uri.queryParameters["from"];
     if (from != null && from.isNotEmpty) {
       context.go(Uri.decodeComponent(from));
@@ -86,6 +91,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
       }
     }
     final notifier = ref.read(authStateProvider.notifier);
+    final wasRegister = _registerMode;
     final bool success;
     if (_registerMode) {
       success = await notifier.register(
@@ -101,7 +107,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     }
     if (!mounted) return;
     if (success) {
-      _goAfterSuccess();
+      _goAfterSuccess(wasRegister: wasRegister);
     }
   }
 

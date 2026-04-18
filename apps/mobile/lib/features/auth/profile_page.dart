@@ -24,6 +24,15 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final name = ref.read(authStateProvider).profile?.name;
+    if (name != null && name.isNotEmpty && _nameController.text.trim().isEmpty) {
+      _nameController.text = name;
+    }
+  }
+
+  @override
   void dispose() {
     _nameController.dispose();
     super.dispose();
@@ -35,12 +44,12 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
     final profile = auth.profile;
 
     ref.listen<AuthState>(authStateProvider, (previous, next) {
-      final name = next.profile?.name;
-      if (name == null) {
+      final n = next.profile?.name;
+      if (n == null || n.isEmpty) {
         return;
       }
-      if (previous?.profile?.name != next.profile?.name) {
-        _nameController.text = name;
+      if (_nameController.text.trim().isEmpty) {
+        _nameController.text = n;
       }
     });
 
@@ -68,18 +77,6 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                   Text(profile.email, style: Theme.of(context).textTheme.bodyLarge),
                 ]
               )
-            ),
-            const SizedBox(height: AppDim.space2),
-            ListTile(
-              contentPadding: EdgeInsets.zero,
-              leading: const LIcon(LucideIcons.send, color: AppColors.primary),
-              title: const Text("Contatos enviados"),
-              subtitle: Text(
-                "Histórico do botão “Contato” nas fichas — não é a mesma coisa que favoritar.",
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppColors.textSecondary)
-              ),
-              trailing: const LIcon(LucideIcons.chevronRight, color: AppColors.textSecondary),
-              onTap: () => context.push("/my-contacts")
             ),
             const SizedBox(height: AppDim.space2),
             TextField(
