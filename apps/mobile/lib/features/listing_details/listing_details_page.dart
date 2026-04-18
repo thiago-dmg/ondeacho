@@ -467,7 +467,7 @@ class _ListingDetailsPageState extends ConsumerState<ListingDetailsPage> {
                         },
                         loading: () => const Center(child: LinearProgressIndicator(minHeight: 3)),
                         error: (e, st) => Text(
-                          "Nota ${clinic.rating.toStringAsFixed(1)} (detalhe indisponível)",
+                          "Não foi possível carregar o resumo de avaliações.",
                           style: Theme.of(context).textTheme.bodyLarge
                         )
                       ),

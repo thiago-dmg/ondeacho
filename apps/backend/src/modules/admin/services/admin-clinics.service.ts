@@ -4,6 +4,9 @@ import { In, Repository } from "typeorm";
 import { InsuranceEntity } from "../../catalog/entities/insurance.entity";
 import { SpecialtyEntity } from "../../catalog/entities/specialty.entity";
 import { ClinicEntity } from "../../listings/entities/clinic.entity";
+import { aggregateApprovedReviewsByClinicIds } from "../../reviews/approved-review-aggregates";
+import { computeAppRating } from "../../reviews/review-summary.util";
+import { ReviewEntity } from "../../reviews/entities/review.entity";
 import { UpsertClinicDto } from "../dto/upsert-clinic.dto";
 
 @Injectable()
@@ -14,13 +17,35 @@ export class AdminClinicsService {
     @InjectRepository(SpecialtyEntity)
     private readonly specialtiesRepository: Repository<SpecialtyEntity>,
     @InjectRepository(InsuranceEntity)
-    private readonly insurancesRepository: Repository<InsuranceEntity>
+    private readonly insurancesRepository: Repository<InsuranceEntity>,
+    @InjectRepository(ReviewEntity)
+    private readonly reviewsRepository: Repository<ReviewEntity>
   ) {}
 
-  list() {
-    return this.clinicsRepository.find({
+  async list() {
+    const clinics = await this.clinicsRepository.find({
       relations: { specialties: true, insurances: true },
       order: { createdAt: "DESC" }
+    });
+    if (clinics.length === 0) {
+      return [];
+    }
+    const byClinic = await aggregateApprovedReviewsByClinicIds(
+      this.reviewsRepository,
+      clinics.map((c) => c.id)
+    );
+    return clinics.map((clinic) => {
+      const agg = byClinic.get(clinic.id);
+      const { averageRating, reviewCount } = computeAppRating({
+        appSumRatings: agg?.sumRatings ?? 0,
+        appReviewCount: agg?.count ?? 0
+      });
+      return {
+        ...clinic,
+        rating: averageRating ?? 0,
+        displayRating: averageRating,
+        displayReviewCount: reviewCount
+      };
     });
   }
 
@@ -41,7 +66,7 @@ export class AdminClinicsService {
       zipcode: dto.zipcode ?? null,
       phone: dto.phone ?? null,
       whatsappPhone: dto.whatsappPhone ?? null,
-      rating: dto.rating ?? 0,
+      rating: 0,
       acceptsOnline: dto.acceptsOnline ?? false,
       supportsTeaTdh: dto.supportsTeaTdh ?? true,
       specialties,

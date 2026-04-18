@@ -12,7 +12,7 @@ class ClinicListing {
   final bool isClaimed;
   final bool isVerified;
   final double rating;
-  /// Nota combinada (Google + app), quando a API envia (listagem enriquecida).
+  /// Média das avaliações aprovadas no app (quando a API envia).
   final double? displayRating;
   final int displayReviewCount;
   final String? description;
@@ -42,9 +42,6 @@ class ClinicListing {
   String get ratingLineLabel {
     if (displayRating != null) {
       return "Nota ${displayRating!.toStringAsFixed(1)} • $displayReviewCount aval.";
-    }
-    if (rating > 0) {
-      return "Nota ${rating.toStringAsFixed(1)}";
     }
     return "Sem avaliações ainda";
   }

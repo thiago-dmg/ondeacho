@@ -55,7 +55,7 @@ VALUES
     '(11) 99888-7766',
     true,
     true,
-    4.8
+    0
   ),
   (
     'Espaço Integrar Kids',
@@ -69,7 +69,7 @@ VALUES
     '(19) 99123-4567',
     true,
     true,
-    4.6
+    0
   )
 ON CONFLICT DO NOTHING;
 

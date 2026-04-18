@@ -1,6 +1,6 @@
 import { ApiProperty } from "@nestjs/swagger";
 import { Type } from "class-transformer";
-import { IsArray, IsBoolean, IsNotEmpty, IsOptional, IsString, IsUUID, Max, Min } from "class-validator";
+import { IsArray, IsBoolean, IsNotEmpty, IsOptional, IsString, IsUUID } from "class-validator";
 
 export class UpsertClinicDto {
   @ApiProperty()
@@ -47,12 +47,6 @@ export class UpsertClinicDto {
   @IsOptional()
   @IsString()
   description?: string;
-
-  @ApiProperty({ required: false, minimum: 0, maximum: 5 })
-  @IsOptional()
-  @Min(0)
-  @Max(5)
-  rating?: number;
 
   @ApiProperty({ required: false, default: false })
   @IsOptional()

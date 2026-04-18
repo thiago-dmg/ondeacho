@@ -1,11 +1,12 @@
 import { Injectable, NotFoundException } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Repository } from "typeorm";
+import { aggregateApprovedReviewsByClinicIds } from "../reviews/approved-review-aggregates";
+import { computeAppRating } from "../reviews/review-summary.util";
 import { ListingsFilterDto } from "./dto/listings-filter.dto";
 import { ClinicEntity } from "./entities/clinic.entity";
 import { ProfessionalEntity } from "../professionals/entities/professional.entity";
 import { ReviewEntity } from "../reviews/entities/review.entity";
-import { computeAppRating } from "../reviews/review-summary.util";
 
 @Injectable()
 export class ListingsService {
@@ -31,7 +32,15 @@ export class ListingsService {
       qb.andWhere("clinic.acceptsOnline = :online", { online: filters.online });
     }
     if (filters.minRating !== undefined) {
-      qb.andWhere("clinic.rating >= :minRating", { minRating: filters.minRating });
+      qb.andWhere(
+        `clinic.id IN (
+          SELECT r.clinic_id FROM reviews r
+          WHERE r.status = :approvedStatus
+          GROUP BY r.clinic_id
+          HAVING AVG(r.rating) >= :minRating
+        )`,
+        { approvedStatus: "approved", minRating: filters.minRating }
+      );
     }
     if (filters.specialtyId) {
       qb.andWhere("specialty.id = :specialtyId", { specialtyId: filters.specialtyId });
@@ -40,7 +49,7 @@ export class ListingsService {
       qb.andWhere("insurance.id = :insuranceId", { insuranceId: filters.insuranceId });
     }
 
-    const clinics = await qb.orderBy("clinic.rating", "DESC").getMany();
+    const clinics = await qb.orderBy("clinic.id", "ASC").getMany();
     return this.attachDisplayRatings(clinics);
   }
 
@@ -50,28 +59,12 @@ export class ListingsService {
     }
 
     const ids = clinics.map((c) => c.id);
-    const rawRows = await this.reviewsRepository
-      .createQueryBuilder("r")
-      .select("r.clinicId", "clinicId")
-      .addSelect("SUM(r.rating)", "sumRatings")
-      .addSelect("COUNT(*)", "appCount")
-      .where("r.clinicId IN (:...ids)", { ids })
-      .andWhere("r.status = :st", { st: "approved" })
-      .groupBy("r.clinicId")
-      .getRawMany<{ clinicId: string; sumRatings: string | null; appCount: string | null }>();
-
-    const byClinic = new Map<string, { sumRatings: number; appCount: number }>();
-    for (const row of rawRows) {
-      byClinic.set(row.clinicId, {
-        sumRatings: row.sumRatings != null ? Number(row.sumRatings) : 0,
-        appCount: row.appCount != null ? Number(row.appCount) : 0
-      });
-    }
+    const byClinic = await aggregateApprovedReviewsByClinicIds(this.reviewsRepository, ids);
 
     const enriched = clinics.map((clinic) => {
       const agg = byClinic.get(clinic.id);
       const appSumRatings = agg?.sumRatings ?? 0;
-      const appReviewCount = agg?.appCount ?? 0;
+      const appReviewCount = agg?.count ?? 0;
 
       const { averageRating, reviewCount } = computeAppRating({
         appSumRatings,
@@ -80,6 +73,7 @@ export class ListingsService {
 
       return {
         ...clinic,
+        rating: averageRating ?? 0,
         displayRating: averageRating,
         displayReviewCount: reviewCount
       };

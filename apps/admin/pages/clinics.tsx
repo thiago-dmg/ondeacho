@@ -16,7 +16,9 @@ type Clinic = {
   phone?: string | null;
   whatsappPhone?: string | null;
   description?: string | null;
-  rating: number;
+  rating?: number;
+  displayRating?: number | null;
+  displayReviewCount?: number;
   acceptsOnline?: boolean;
   supportsTeaTdh?: boolean;
   specialties?: { id: string; name: string }[];
@@ -33,7 +35,6 @@ type ClinicForm = {
   phone: string;
   whatsappPhone: string;
   description: string;
-  rating: string;
   acceptsOnline: boolean;
   supportsTeaTdh: boolean;
   specialtyIds: string[];
@@ -51,7 +52,6 @@ function emptyForm(): ClinicForm {
     phone: "",
     whatsappPhone: "",
     description: "",
-    rating: "0",
     acceptsOnline: false,
     supportsTeaTdh: true,
     specialtyIds: [],
@@ -70,7 +70,6 @@ function clinicToForm(c: Clinic): ClinicForm {
     phone: c.phone ?? "",
     whatsappPhone: c.whatsappPhone ?? "",
     description: c.description ?? "",
-    rating: String(c.rating ?? 0),
     acceptsOnline: Boolean(c.acceptsOnline),
     supportsTeaTdh: c.supportsTeaTdh !== false,
     specialtyIds: c.specialties?.map((s) => s.id) ?? [],
@@ -79,7 +78,6 @@ function clinicToForm(c: Clinic): ClinicForm {
 }
 
 function formToPayload(f: ClinicForm) {
-  const rating = Math.min(5, Math.max(0, Number.parseFloat(f.rating) || 0));
   return {
     name: f.name.trim(),
     city: f.city.trim(),
@@ -90,7 +88,6 @@ function formToPayload(f: ClinicForm) {
     phone: f.phone.trim() || undefined,
     whatsappPhone: f.whatsappPhone.trim() || undefined,
     description: f.description.trim() || undefined,
-    rating,
     acceptsOnline: f.acceptsOnline,
     supportsTeaTdh: f.supportsTeaTdh,
     specialtyIds: f.specialtyIds.length ? f.specialtyIds : undefined,
@@ -233,21 +230,6 @@ function ClinicFormFields({
           className="oa-input"
           value={form.whatsappPhone}
           onChange={(e) => setForm((p) => ({ ...p, whatsappPhone: e.target.value }))}
-        />
-      </div>
-      <div className="oa-field">
-        <label className="oa-label" htmlFor="clinic-rating">
-          Nota (0–5)
-        </label>
-        <input
-          id="clinic-rating"
-          className="oa-input"
-          type="number"
-          min={0}
-          max={5}
-          step={0.1}
-          value={form.rating}
-          onChange={(e) => setForm((p) => ({ ...p, rating: e.target.value }))}
         />
       </div>
       <div className="oa-field" style={{ justifyContent: "center" }}>
@@ -395,7 +377,7 @@ export default function ClinicsPage() {
             <tr>
               <th>Nome</th>
               <th>Local</th>
-              <th>Nota</th>
+              <th>Nota (comunidade)</th>
               <th style={{ width: 200 }} aria-label="Ações" />
             </tr>
           </thead>
@@ -414,7 +396,11 @@ export default function ClinicsPage() {
                   {c.city}
                   {c.neighborhood ? ` · ${c.neighborhood}` : ""}
                 </td>
-                <td>{Number(c.rating).toFixed(1)}</td>
+                <td>
+                  {c.displayRating != null && c.displayRating !== undefined
+                    ? `${Number(c.displayRating).toFixed(1)} (${c.displayReviewCount ?? 0} aval.)`
+                    : "—"}
+                </td>
                 <td>
                   <div className="oa-table__actions">
                     <button type="button" className="oa-btn oa-btn--secondary oa-btn--sm" onClick={() => openEdit(c)}>

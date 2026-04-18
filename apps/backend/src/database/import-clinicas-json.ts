@@ -249,7 +249,7 @@ async function importClinicsFromJson(client: Client, payload: ImportPayload): Pr
         normalizeText(clinic.endereco_completo, 200),
         phone,
         whatsapp,
-        clinic.nota_media ?? 0
+        0
       ]
     );
 

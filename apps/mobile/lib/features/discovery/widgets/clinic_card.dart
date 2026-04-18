@@ -42,7 +42,7 @@ class ClinicCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = Theme.of(context).textTheme;
-    final displayRating = clinic.displayRating ?? (clinic.rating > 0 ? clinic.rating : null);
+    final displayRating = clinic.displayRating;
     final reviewCount = clinic.displayReviewCount;
     final loc = [clinic.neighborhood, clinic.city].where((x) => (x ?? "").trim().isNotEmpty).join(" • ");
     final locationLine = loc.isEmpty ? clinic.city : loc;
