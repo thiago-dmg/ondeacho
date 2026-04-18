@@ -1,3 +1,4 @@
+-- Senhas de demonstração (hash bcrypt abaixo): Admin@123 — contas admin@ondeacho.app e responsavel@ondeacho.app
 -- Usuários base
 INSERT INTO users (name, email, password_hash, role)
 VALUES

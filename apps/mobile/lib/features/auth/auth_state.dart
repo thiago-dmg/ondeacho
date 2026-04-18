@@ -5,6 +5,21 @@ import "../../core/storage/shared_prefs_provider.dart";
 
 const _authTokenKey = "auth_token";
 
+String? _messageFromResponse(DioException error) {
+  final data = error.response?.data;
+  if (data is! Map) {
+    return null;
+  }
+  final raw = data["message"];
+  if (raw is String && raw.isNotEmpty) {
+    return raw;
+  }
+  if (raw is List && raw.isNotEmpty) {
+    return raw.first.toString();
+  }
+  return null;
+}
+
 class UserProfile {
   final String id;
   final String name;
@@ -105,9 +120,7 @@ class AuthStateNotifier extends Notifier<AuthState> {
       final message = error.type == DioExceptionType.connectionError ||
               error.type == DioExceptionType.connectionTimeout
           ? "Não foi possível conectar ao servidor. Verifique se o backend está rodando."
-          : error.response?.data is Map<String, dynamic>
-              ? (error.response?.data["message"]?.toString() ?? "Falha no login.")
-              : "Falha no login.";
+          : _messageFromResponse(error) ?? "Falha no login.";
       state = AuthState(
         loading: false,
         token: state.token,
@@ -153,9 +166,7 @@ class AuthStateNotifier extends Notifier<AuthState> {
       final message = error.type == DioExceptionType.connectionError ||
               error.type == DioExceptionType.connectionTimeout
           ? "Não foi possível conectar ao servidor. Verifique se o backend está rodando."
-          : error.response?.data is Map<String, dynamic>
-              ? (error.response?.data["message"]?.toString() ?? "Não foi possível criar a conta.")
-              : "Não foi possível criar a conta.";
+          : _messageFromResponse(error) ?? "Não foi possível criar a conta.";
       state = AuthState(
         loading: false,
         token: state.token,

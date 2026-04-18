@@ -6,7 +6,10 @@ import "../../core/theme/app_dimensions.dart";
 import "auth_state.dart";
 
 class LoginPage extends ConsumerStatefulWidget {
-  const LoginPage({super.key});
+  /// Abre direto no fluxo de cadastro (rota `/register` ou `?register=1`).
+  final bool startInRegisterMode;
+
+  const LoginPage({super.key, this.startInRegisterMode = false});
 
   @override
   ConsumerState<LoginPage> createState() => _LoginPageState();
@@ -16,7 +19,21 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-  bool _registerMode = false;
+  late bool _registerMode;
+
+  @override
+  void initState() {
+    super.initState();
+    _registerMode = widget.startInRegisterMode;
+  }
+
+  @override
+  void didUpdateWidget(covariant LoginPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.startInRegisterMode != widget.startInRegisterMode) {
+      _registerMode = widget.startInRegisterMode;
+    }
+  }
 
   @override
   void dispose() {
@@ -33,6 +50,22 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     } else {
       context.go("/discovery");
     }
+  }
+
+  Uri _registerUri() {
+    final from = GoRouterState.of(context).uri.queryParameters["from"];
+    if (from != null && from.isNotEmpty) {
+      return Uri(path: "/register", queryParameters: {"from": from});
+    }
+    return Uri(path: "/register");
+  }
+
+  Uri _loginUri() {
+    final from = GoRouterState.of(context).uri.queryParameters["from"];
+    if (from != null && from.isNotEmpty) {
+      return Uri(path: "/login", queryParameters: {"from": from});
+    }
+    return Uri(path: "/login");
   }
 
   Future<void> _submit() async {
@@ -109,60 +142,64 @@ class _LoginPageState extends ConsumerState<LoginPage> {
           ),
           const SizedBox(height: AppDim.space3),
           if (_registerMode) ...[
-              TextField(
-                controller: _nameController,
-                decoration: const InputDecoration(labelText: "Nome completo"),
-                textCapitalization: TextCapitalization.words,
-                autofillHints: const [AutofillHints.name]
-              ),
-              const SizedBox(height: 12)
-            ],
             TextField(
-              controller: _emailController,
-              keyboardType: TextInputType.emailAddress,
-              decoration: const InputDecoration(labelText: "E-mail"),
-              autofillHints: const [AutofillHints.email]
+              controller: _nameController,
+              decoration: const InputDecoration(labelText: "Nome completo"),
+              textCapitalization: TextCapitalization.words,
+              autofillHints: const [AutofillHints.name]
             ),
+            const SizedBox(height: 12)
+          ],
+          TextField(
+            controller: _emailController,
+            keyboardType: TextInputType.emailAddress,
+            decoration: const InputDecoration(labelText: "E-mail"),
+            autofillHints: const [AutofillHints.email]
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _passwordController,
+            obscureText: true,
+            decoration: InputDecoration(
+              labelText: "Senha",
+              helperText: _registerMode ? "Mínimo de 8 caracteres" : null
+            ),
+            autofillHints: _registerMode
+                ? const [AutofillHints.newPassword]
+                : const [AutofillHints.password]
+          ),
+          const SizedBox(height: 20),
+          FilledButton(
+            onPressed: authState.loading ? null : _submit,
+            child: Text(
+              authState.loading
+                  ? (_registerMode ? "Criando conta..." : "Entrando...")
+                  : (_registerMode ? "Criar conta" : "Entrar")
+            )
+          ),
+          const SizedBox(height: 12),
+          TextButton(
+            onPressed: authState.loading
+                ? null
+                : () {
+                    ref.read(authStateProvider.notifier).clearError();
+                    if (_registerMode) {
+                      context.go(_loginUri().toString());
+                    } else {
+                      context.push(_registerUri().toString());
+                    }
+                  },
+            child: Text(
+              _registerMode ? "Já tenho conta — entrar" : "Não tenho conta — criar conta"
+            )
+          ),
+          if (authState.error != null) ...[
             const SizedBox(height: 12),
-            TextField(
-              controller: _passwordController,
-              obscureText: true,
-              decoration: InputDecoration(
-                labelText: "Senha",
-                helperText: _registerMode ? "Mínimo de 8 caracteres" : null
-              ),
-              autofillHints: _registerMode
-                  ? const [AutofillHints.newPassword]
-                  : const [AutofillHints.password]
-            ),
-            const SizedBox(height: 20),
-            FilledButton(
-              onPressed: authState.loading ? null : _submit,
-              child: Text(
-                authState.loading
-                    ? (_registerMode ? "Criando conta..." : "Entrando...")
-                    : (_registerMode ? "Criar conta" : "Entrar")
-              )
-            ),
-            const SizedBox(height: 12),
-            TextButton(
-              onPressed: authState.loading
-                  ? null
-                  : () {
-                      ref.read(authStateProvider.notifier).clearError();
-                      setState(() => _registerMode = !_registerMode);
-                    },
-              child: Text(
-                _registerMode ? "Já tenho conta — entrar" : "Não tenho conta — criar conta"
-              )
-            ),
-            if (authState.error != null) ...[
-              const SizedBox(height: 12),
-              Text(
-                authState.error!,
-                style: TextStyle(color: Theme.of(context).colorScheme.error)
-              )
-            ]
+            Text(
+              authState.error!,
+              style: TextStyle(color: Theme.of(context).colorScheme.error)
+            )
+          ]
         ]
       )
     );

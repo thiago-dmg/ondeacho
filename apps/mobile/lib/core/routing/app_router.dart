@@ -12,22 +12,28 @@ import "../../features/favorites/favorites_page.dart";
 import "../../features/listing_details/listing_details_page.dart";
 import "../../features/reviews/clinic_reviews_page.dart";
 
+/// O [GoRouter] não pode ser recriado a cada mudança em [AuthState] (ex.: `clearError`),
+/// senão a pilha volta para [initialLocation] e a tela de login/cadastro “some”.
 final appRouterProvider = Provider<GoRouter>((ref) {
-  final authState = ref.watch(authStateProvider);
   const privateRoutes = {"/favorites", "/my-contacts", "/profile"};
-  return GoRouter(
+
+  final router = GoRouter(
     initialLocation: "/discovery",
     redirect: (context, state) {
-      final loggedIn = authState.token != null;
-      final inLogin = state.matchedLocation == "/login";
-      final isPrivate = privateRoutes.contains(state.matchedLocation);
+      final auth = ref.read(authStateProvider);
+      final loggedIn = auth.token != null && auth.token!.isNotEmpty;
+      final loc = state.matchedLocation;
+      final inLogin = loc == "/login";
+      final inRegister = loc == "/register";
+      final inAuth = inLogin || inRegister;
+      final isPrivate = privateRoutes.contains(loc);
 
       if (!loggedIn && isPrivate) {
         final from = Uri.encodeComponent(state.uri.toString());
         return "/login?from=$from";
       }
 
-      if (loggedIn && inLogin) {
+      if (loggedIn && inAuth) {
         final from = state.uri.queryParameters["from"];
         if (from != null && from.isNotEmpty) {
           return Uri.decodeComponent(from);
@@ -40,7 +46,14 @@ final appRouterProvider = Provider<GoRouter>((ref) {
     routes: [
       GoRoute(
         path: "/login",
-        builder: (context, state) => const LoginPage()
+        builder: (context, state) {
+          final register = state.uri.queryParameters["register"] == "1";
+          return LoginPage(startInRegisterMode: register);
+        }
+      ),
+      GoRoute(
+        path: "/register",
+        builder: (context, state) => const LoginPage(startInRegisterMode: true)
       ),
       GoRoute(
         path: "/discovery",
@@ -94,4 +107,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       )
     ]
   );
+
+  ref.listen<AuthState>(authStateProvider, (previous, next) {
+    router.refresh();
+  });
+
+  ref.onDispose(router.dispose);
+  return router;
 });
