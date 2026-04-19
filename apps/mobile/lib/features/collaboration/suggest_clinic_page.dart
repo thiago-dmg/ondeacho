@@ -9,23 +9,6 @@ import "../../core/widgets/app_section_header.dart";
 import "../auth/auth_state.dart";
 import "collaboration_api.dart";
 
-const _kAtClinic = "at_clinic";
-const _kOwnOffice = "own_office";
-const _kOtherLocation = "other_location";
-
-String _professionalAttendanceHint(String mode) {
-  switch (mode) {
-    case _kAtClinic:
-      return "Sem endereço completo do profissional; indique a clínica abaixo se souber.";
-    case _kOwnOffice:
-      return "Pode informar endereço completo abaixo (opcional).";
-    case _kOtherLocation:
-      return "Endereço completo opcional, se quiser indicar onde costuma atender.";
-    default:
-      return "";
-  }
-}
-
 class SuggestClinicPage extends ConsumerStatefulWidget {
   const SuggestClinicPage({super.key});
 
@@ -47,12 +30,7 @@ class _SuggestClinicPageState extends ConsumerState<SuggestClinicPage> {
   final _insurancesController = TextEditingController();
   final _observationsController = TextEditingController();
   String _targetType = "clinica";
-  String _professionalAttendance = _kAtClinic;
   bool _loading = false;
-
-  bool get _showProfessionalAddress =>
-      _targetType == "profissional" &&
-      (_professionalAttendance == _kOwnOffice || _professionalAttendance == _kOtherLocation);
 
   @override
   void dispose() {
@@ -88,9 +66,8 @@ class _SuggestClinicPageState extends ConsumerState<SuggestClinicPage> {
     }
 
     final isProf = _targetType == "profissional";
-    final includeAddress = _targetType == "clinica" || _showProfessionalAddress;
     final addressLine =
-        includeAddress && _addressController.text.trim().isNotEmpty ? _addressController.text.trim() : null;
+        _addressController.text.trim().isEmpty ? null : _addressController.text.trim();
 
     setState(() => _loading = true);
     try {
@@ -102,9 +79,8 @@ class _SuggestClinicPageState extends ConsumerState<SuggestClinicPage> {
                 ? null
                 : _neighborhoodController.text.trim(),
             addressLine: addressLine,
-            professionalAttendance: isProf ? _professionalAttendance : null,
-            linkedClinicName: isProf && _professionalAttendance == _kAtClinic
-                ? (_linkedClinicController.text.trim().isEmpty ? null : _linkedClinicController.text.trim())
+            linkedClinicName: isProf && _linkedClinicController.text.trim().isNotEmpty
+                ? _linkedClinicController.text.trim()
                 : null,
             professionalCrm: isProf && _crmController.text.trim().isNotEmpty ? _crmController.text.trim() : null,
             phone: _phoneController.text.trim().isEmpty ? null : _phoneController.text.trim(),
@@ -191,14 +167,7 @@ class _SuggestClinicPageState extends ConsumerState<SuggestClinicPage> {
                 DropdownMenuItem(value: "clinica", child: Text("Clínica")),
                 DropdownMenuItem(value: "profissional", child: Text("Profissional"))
               ],
-              onChanged: (value) {
-                setState(() {
-                  _targetType = value ?? "clinica";
-                  if (_targetType == "clinica") {
-                    _professionalAttendance = _kAtClinic;
-                  }
-                });
-              }
+              onChanged: (value) => setState(() => _targetType = value ?? "clinica")
             ),
             const SizedBox(height: AppDim.space3),
             const AppSectionHeader(
@@ -220,6 +189,15 @@ class _SuggestClinicPageState extends ConsumerState<SuggestClinicPage> {
                   hintText: "Ex.: CRM-SP 123456"
                 ),
                 maxLength: 80
+              ),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: _linkedClinicController,
+                decoration: const InputDecoration(
+                  labelText: "Clínica onde atende (opcional)",
+                  hintText: "Nome da clínica, se souber"
+                ),
+                maxLength: 200
               )
             ],
             const SizedBox(height: AppDim.space3),
@@ -242,62 +220,10 @@ class _SuggestClinicPageState extends ConsumerState<SuggestClinicPage> {
                 hintText: "Ex.: Unimed, Bradesco Saúde"
               )
             ),
-            if (_targetType == "profissional") ...[
-              const SizedBox(height: AppDim.space3),
-              const AppSectionHeader(
-                title: "Onde atende?",
-                subtitle: "Define se pedimos endereço completo."
-              ),
-              SegmentedButton<String>(
-                segments: const [
-                  ButtonSegment<String>(
-                    value: _kAtClinic,
-                    label: Text("Clínica"),
-                    tooltip: "Em clínica ou consultório de terceiros"
-                  ),
-                  ButtonSegment<String>(
-                    value: _kOwnOffice,
-                    label: Text("Próprio"),
-                    tooltip: "Consultório próprio"
-                  ),
-                  ButtonSegment<String>(
-                    value: _kOtherLocation,
-                    label: Text("Outro"),
-                    tooltip: "Outro local ou sem vínculo fixo"
-                  )
-                ],
-                selected: {_professionalAttendance},
-                emptySelectionAllowed: false,
-                multiSelectionEnabled: false,
-                onSelectionChanged: (Set<String> next) {
-                  if (next.isEmpty) return;
-                  setState(() => _professionalAttendance = next.first);
-                }
-              ),
-              const SizedBox(height: 10),
-              Text(
-                _professionalAttendanceHint(_professionalAttendance),
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: AppColors.textSecondary,
-                      height: 1.35
-                    )
-              ),
-              if (_professionalAttendance == _kAtClinic) ...[
-                const SizedBox(height: 8),
-                TextFormField(
-                  controller: _linkedClinicController,
-                  decoration: const InputDecoration(
-                    labelText: "Nome da clínica ou centro (opcional)",
-                    hintText: "Ex.: Clínica Esperança"
-                  ),
-                  maxLength: 200
-                )
-              ]
-            ],
             const SizedBox(height: AppDim.space3),
             const AppSectionHeader(
               title: "Localização",
-              subtitle: "Cidade obrigatória; bairro e endereço conforme o tipo acima."
+              subtitle: "Cidade obrigatória; demais campos opcionais."
             ),
             TextFormField(
               controller: _cityController,
@@ -310,19 +236,15 @@ class _SuggestClinicPageState extends ConsumerState<SuggestClinicPage> {
               controller: _neighborhoodController,
               decoration: const InputDecoration(labelText: "Bairro (opcional)")
             ),
-            if (_targetType == "clinica" || _showProfessionalAddress) ...[
-              const SizedBox(height: 12),
-              TextFormField(
-                controller: _addressController,
-                decoration: InputDecoration(
-                  labelText: _targetType == "clinica" ? "Endereço (rua e número)" : "Endereço completo (opcional)",
-                  hintText: _targetType == "clinica"
-                      ? "Ajuda no mapa e na busca"
-                      : "Opcional; ajuda na verificação ou no mapa"
-                ),
-                textCapitalization: TextCapitalization.sentences
-              )
-            ],
+            const SizedBox(height: 12),
+            TextFormField(
+              controller: _addressController,
+              decoration: const InputDecoration(
+                labelText: "Endereço (opcional)",
+                hintText: "Rua e número, se quiser"
+              ),
+              textCapitalization: TextCapitalization.sentences
+            ),
             const SizedBox(height: AppDim.space3),
             const AppSectionHeader(
               title: "Contato",

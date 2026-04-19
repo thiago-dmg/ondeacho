@@ -13,7 +13,6 @@ class CollaborationApi {
     required String city,
     String? neighborhood,
     String? addressLine,
-    String? professionalAttendance,
     String? linkedClinicName,
     String? professionalCrm,
     String? phone,
@@ -34,9 +33,6 @@ class CollaborationApi {
       "insuranceNames": insuranceNames ?? [],
       "observations": observations
     };
-    if (professionalAttendance != null) {
-      data["professionalAttendance"] = professionalAttendance;
-    }
     if (linkedClinicName != null) {
       data["linkedClinicName"] = linkedClinicName;
     }

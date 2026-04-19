@@ -1,7 +1,6 @@
 import { ApiProperty } from "@nestjs/swagger";
 import { Type } from "class-transformer";
-import { IsArray, IsIn, IsOptional, IsString, MaxLength, MinLength, ValidateIf } from "class-validator";
-import { ProfessionalSuggestionAttendance } from "../enums/professional-suggestion-attendance.enum";
+import { IsArray, IsIn, IsOptional, IsString, IsUUID, MaxLength, MinLength, ValidateIf } from "class-validator";
 import { SuggestionTargetType } from "../enums/suggestion-target-type.enum";
 
 export class CreateClinicSuggestionDto {
@@ -33,17 +32,40 @@ export class CreateClinicSuggestionDto {
   @MaxLength(200)
   addressLine?: string;
 
-  @ApiProperty({
-    required: false,
-    enum: ProfessionalSuggestionAttendance,
-    description: "Obrigatório para profissional no cliente actual; se omitido, assume other_location."
-  })
+  @ApiProperty({ required: false, type: [String], description: "Especialidades do catálogo (UUID)." })
+  @IsOptional()
+  @IsArray()
+  @IsUUID("4", { each: true })
+  specialtyIds?: string[];
+
+  @ApiProperty({ required: false, description: "Texto livre quando há opção «outros» em especialidades." })
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  specialtyOther?: string;
+
+  @ApiProperty({ required: false, type: [String], description: "Convênios do catálogo (UUID)." })
+  @IsOptional()
+  @IsArray()
+  @IsUUID("4", { each: true })
+  insuranceIds?: string[];
+
+  @ApiProperty({ required: false, description: "Texto livre quando há opção «outros» em convênios." })
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  insuranceOther?: string;
+
+  @ApiProperty({ required: false, description: "Clínica existente vinculada ao profissional sugerido." })
   @ValidateIf((o) => o.targetType === SuggestionTargetType.PROFESSIONAL)
   @IsOptional()
-  @IsIn(Object.values(ProfessionalSuggestionAttendance))
-  professionalAttendance?: ProfessionalSuggestionAttendance;
+  @IsUUID("4")
+  linkedClinicId?: string;
 
-  @ApiProperty({ required: false, description: "Nome da clínica onde atende (profissional em clínica de terceiros)." })
+  @ApiProperty({
+    required: false,
+    description: "Nome de clínica nova (profissional + «outros») ou texto auxiliar."
+  })
   @ValidateIf((o) => o.targetType === SuggestionTargetType.PROFESSIONAL)
   @IsOptional()
   @IsString()
@@ -69,14 +91,22 @@ export class CreateClinicSuggestionDto {
   @MaxLength(20)
   whatsappPhone?: string;
 
-  @ApiProperty({ required: false, type: [String] })
+  @ApiProperty({
+    required: false,
+    type: [String],
+    description: "Legado (ex.: app mobile): nomes de especialidades em texto."
+  })
   @IsOptional()
   @IsArray()
   @Type(() => String)
   @IsString({ each: true })
   specialtyNames?: string[];
 
-  @ApiProperty({ required: false, type: [String] })
+  @ApiProperty({
+    required: false,
+    type: [String],
+    description: "Legado: nomes de convênios em texto."
+  })
   @IsOptional()
   @IsArray()
   @Type(() => String)

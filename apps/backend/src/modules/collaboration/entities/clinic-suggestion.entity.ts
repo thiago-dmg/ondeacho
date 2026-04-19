@@ -51,6 +51,21 @@ export class ClinicSuggestionEntity {
   @Column({ name: "insurance_names", type: "text", array: true, default: "{}" })
   insuranceNames!: string[];
 
+  @Column({ name: "specialty_ids", type: "uuid", array: true, default: "{}" })
+  specialtyIds!: string[];
+
+  @Column({ name: "specialty_other", type: "varchar", length: 500, nullable: true })
+  specialtyOther!: string | null;
+
+  @Column({ name: "insurance_ids", type: "uuid", array: true, default: "{}" })
+  insuranceIds!: string[];
+
+  @Column({ name: "insurance_other", type: "varchar", length: 500, nullable: true })
+  insuranceOther!: string | null;
+
+  @Column({ name: "linked_clinic_id", type: "uuid", nullable: true })
+  linkedClinicId!: string | null;
+
   @Column({ type: "text", nullable: true })
   observations!: string | null;
 

@@ -1,57 +1,100 @@
 import Link from "next/link";
 import { useRouter } from "next/router";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { SiteLayout } from "../src/components/SiteLayout";
 import { apiRequest } from "../src/lib/api";
 import { useAuth } from "../src/lib/auth-context";
 
-const PROFESSIONAL_ATTENDANCE = {
-  at_clinic: "at_clinic",
-  own_office: "own_office",
-  other_location: "other_location"
-} as const;
+const OTHER = "__other__";
 
-type ProfessionalAttendance = (typeof PROFESSIONAL_ATTENDANCE)[keyof typeof PROFESSIONAL_ATTENDANCE];
-
-function parseList(value: string): string[] {
-  return value
-    .split(",")
-    .map((s) => s.trim())
-    .filter(Boolean);
-}
+type CatalogRow = { id: string; name: string };
+type ClinicRow = { id: string; name: string; city: string };
 
 export default function SugerirPage() {
   const { token } = useAuth();
   const router = useRouter();
   const [targetType, setTargetType] = useState<"clinica" | "profissional">("clinica");
-  const [professionalAttendance, setProfessionalAttendance] = useState<ProfessionalAttendance>(
-    PROFESSIONAL_ATTENDANCE.at_clinic
-  );
   const [name, setName] = useState("");
   const [professionalCrm, setProfessionalCrm] = useState("");
-  const [linkedClinicName, setLinkedClinicName] = useState("");
   const [city, setCity] = useState("");
   const [neighborhood, setNeighborhood] = useState("");
   const [addressLine, setAddressLine] = useState("");
   const [phone, setPhone] = useState("");
   const [whatsappPhone, setWhatsappPhone] = useState("");
-  const [specialties, setSpecialties] = useState("");
-  const [insurances, setInsurances] = useState("");
   const [observations, setObservations] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
-  const showProfessionalAddress =
-    targetType === "profissional" &&
-    (professionalAttendance === PROFESSIONAL_ATTENDANCE.own_office ||
-      professionalAttendance === PROFESSIONAL_ATTENDANCE.other_location);
+  const [catalogLoading, setCatalogLoading] = useState(true);
+  const [catalogError, setCatalogError] = useState<string | null>(null);
+  const [specialties, setSpecialties] = useState<CatalogRow[]>([]);
+  const [insurances, setInsurances] = useState<CatalogRow[]>([]);
+  const [clinics, setClinics] = useState<ClinicRow[]>([]);
+
+  const [selectedSpecialtyIds, setSelectedSpecialtyIds] = useState<string[]>([]);
+  const [specialtyOtherText, setSpecialtyOtherText] = useState("");
+  const [selectedInsuranceIds, setSelectedInsuranceIds] = useState<string[]>([]);
+  const [insuranceOtherText, setInsuranceOtherText] = useState("");
+  const [linkedClinicValue, setLinkedClinicValue] = useState("");
+  const [linkedClinicOtherText, setLinkedClinicOtherText] = useState("");
+
+  const specialtyOtherOn = useMemo(() => selectedSpecialtyIds.includes(OTHER), [selectedSpecialtyIds]);
+  const insuranceOtherOn = useMemo(() => selectedInsuranceIds.includes(OTHER), [selectedInsuranceIds]);
+  const linkedClinicOtherOn = linkedClinicValue === OTHER;
 
   useEffect(() => {
-    if (targetType === "clinica") {
-      setProfessionalAttendance(PROFESSIONAL_ATTENDANCE.at_clinic);
+    let cancelled = false;
+    void (async () => {
+      setCatalogLoading(true);
+      setCatalogError(null);
+      try {
+        const [s, i, rawListings] = await Promise.all([
+          apiRequest<unknown[]>("/catalog/specialties", { skipAuth: true }),
+          apiRequest<unknown[]>("/catalog/insurances", { skipAuth: true }),
+          apiRequest<unknown[]>("/listings", { skipAuth: true })
+        ]);
+        if (cancelled) return;
+        setSpecialties(
+          (s as Record<string, unknown>[]).map((row) => ({
+            id: String(row.id ?? ""),
+            name: String(row.name ?? "")
+          }))
+        );
+        setInsurances(
+          (i as Record<string, unknown>[]).map((row) => ({
+            id: String(row.id ?? ""),
+            name: String(row.name ?? "")
+          }))
+        );
+        setClinics(
+          (rawListings as Record<string, unknown>[])
+            .filter((row) => row && typeof row === "object")
+            .map((row) => ({
+              id: String(row.id ?? ""),
+              name: String(row.name ?? ""),
+              city: String(row.city ?? "")
+            }))
+        );
+      } catch (e) {
+        if (!cancelled) {
+          setCatalogError(e instanceof Error ? e.message : "Erro ao carregar listas.");
+        }
+      } finally {
+        if (!cancelled) setCatalogLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const toggleMulti = (prev: string[], id: string, selected: boolean): string[] => {
+    if (selected) {
+      return prev.includes(id) ? prev : [...prev, id];
     }
-  }, [targetType]);
+    return prev.filter((x) => x !== id);
+  };
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -60,9 +103,25 @@ export default function SugerirPage() {
       return;
     }
     setError(null);
+    if (specialtyOtherOn && !specialtyOtherText.trim()) {
+      setError("Descreva as especialidades em «Outros» ou desmarque a opção.");
+      return;
+    }
+    if (insuranceOtherOn && !insuranceOtherText.trim()) {
+      setError("Descreva os convênios em «Outros» ou desmarque a opção.");
+      return;
+    }
+    if (linkedClinicOtherOn && !linkedClinicOtherText.trim()) {
+      setError('Indique o nome da clínica em «Outros» ou escolha outra opção.');
+      return;
+    }
+
     setSubmitting(true);
     try {
-      const base = {
+      const specialtyIds = selectedSpecialtyIds.filter((id) => id !== OTHER);
+      const insuranceIds = selectedInsuranceIds.filter((id) => id !== OTHER);
+
+      const body: Record<string, unknown> = {
         targetType,
         name: name.trim(),
         city: city.trim(),
@@ -70,20 +129,26 @@ export default function SugerirPage() {
         addressLine: addressLine.trim() || undefined,
         phone: phone.trim() || undefined,
         whatsappPhone: whatsappPhone.trim() || undefined,
-        specialtyNames: parseList(specialties),
-        insuranceNames: parseList(insurances),
+        specialtyIds,
+        insuranceIds,
         observations: observations.trim() || undefined
       };
 
-      const body =
-        targetType === "profissional"
-          ? {
-              ...base,
-              professionalAttendance,
-              linkedClinicName: linkedClinicName.trim() || undefined,
-              professionalCrm: professionalCrm.trim() || undefined
-            }
-          : base;
+      if (specialtyOtherOn) {
+        body.specialtyOther = specialtyOtherText.trim();
+      }
+      if (insuranceOtherOn) {
+        body.insuranceOther = insuranceOtherText.trim();
+      }
+
+      if (targetType === "profissional") {
+        body.professionalCrm = professionalCrm.trim() || undefined;
+        if (linkedClinicValue && linkedClinicValue !== OTHER) {
+          body.linkedClinicId = linkedClinicValue;
+        } else if (linkedClinicOtherOn) {
+          body.linkedClinicName = linkedClinicOtherText.trim();
+        }
+      }
 
       await apiRequest("/clinic-suggestions", {
         method: "POST",
@@ -116,7 +181,7 @@ export default function SugerirPage() {
       <div className="container" style={{ paddingTop: 28, paddingBottom: 48, maxWidth: 560 }}>
         <h1 style={{ fontSize: 26, marginBottom: 8 }}>Sugerir clínica ou profissional</h1>
         <p className="muted" style={{ marginBottom: 24 }}>
-          Ajude outras famílias: informe dados que ainda não estão no OndeAcho. É necessário estar logado.
+          Ajude outras famílias: use as listas do OndeAcho quando possível. É necessário estar logado.
         </p>
 
         {!token ? (
@@ -127,6 +192,13 @@ export default function SugerirPage() {
           </p>
         ) : (
           <form className="card" style={{ padding: 24 }} onSubmit={submit}>
+            {catalogLoading ? <p className="muted">A carregar especialidades, convênios e clínicas…</p> : null}
+            {catalogError ? (
+              <p style={{ color: "#b45309", marginBottom: 12 }} role="alert">
+                {catalogError}
+              </p>
+            ) : null}
+
             <label style={{ display: "block", marginBottom: 16 }}>
               <span className="muted" style={{ display: "block", marginBottom: 6, fontSize: 13 }}>
                 Tipo
@@ -134,7 +206,11 @@ export default function SugerirPage() {
               <select
                 className="text-input"
                 value={targetType}
-                onChange={(e) => setTargetType(e.target.value as "clinica" | "profissional")}
+                onChange={(e) => {
+                  setTargetType(e.target.value as "clinica" | "profissional");
+                  setLinkedClinicValue("");
+                  setLinkedClinicOtherText("");
+                }}
               >
                 <option value="clinica">Clínica</option>
                 <option value="profissional">Profissional</option>
@@ -163,87 +239,152 @@ export default function SugerirPage() {
               </label>
             ) : null}
 
-            <label style={{ display: "block", marginBottom: 16 }}>
-              <span className="muted" style={{ display: "block", marginBottom: 6, fontSize: 13 }}>
-                Especialidades (separadas por vírgula)
-              </span>
-              <input
-                className="input"
-                value={specialties}
-                onChange={(e) => setSpecialties(e.target.value)}
-                placeholder="Ex.: Fonoaudiologia, Psicologia infantil"
-              />
-            </label>
-            <label style={{ display: "block", marginBottom: 16 }}>
-              <span className="muted" style={{ display: "block", marginBottom: 6, fontSize: 13 }}>
-                Convênios (separados por vírgula)
-              </span>
-              <input className="input" value={insurances} onChange={(e) => setInsurances(e.target.value)} />
-            </label>
+            {!catalogLoading && !catalogError ? (
+              <>
+                <fieldset style={{ border: "none", margin: "0 0 16px", padding: 0 }}>
+                  <legend className="muted" style={{ fontSize: 13, marginBottom: 8 }}>
+                    Especialidades
+                  </legend>
+                  <div
+                    className="card"
+                    style={{
+                      maxHeight: 200,
+                      overflowY: "auto",
+                      padding: "10px 12px",
+                      border: "1px solid var(--color-divider)"
+                    }}
+                  >
+                    {specialties.map((row) => (
+                      <label
+                        key={row.id}
+                        style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6, cursor: "pointer" }}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={selectedSpecialtyIds.includes(row.id)}
+                          onChange={(e) =>
+                            setSelectedSpecialtyIds((prev) => toggleMulti(prev, row.id, e.target.checked))
+                          }
+                        />
+                        <span style={{ fontSize: 14 }}>{row.name}</span>
+                      </label>
+                    ))}
+                    <label style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 8, cursor: "pointer" }}>
+                      <input
+                        type="checkbox"
+                        checked={specialtyOtherOn}
+                        onChange={(e) =>
+                          setSelectedSpecialtyIds((prev) => toggleMulti(prev, OTHER, e.target.checked))
+                        }
+                      />
+                      <span style={{ fontSize: 14, fontWeight: 600 }}>Outros…</span>
+                    </label>
+                  </div>
+                  {specialtyOtherOn ? (
+                    <label style={{ display: "block", marginTop: 10 }}>
+                      <span className="muted" style={{ display: "block", marginBottom: 6, fontSize: 13 }}>
+                        Descreva (pode usar vírgula entre várias)
+                      </span>
+                      <input
+                        className="input"
+                        value={specialtyOtherText}
+                        onChange={(e) => setSpecialtyOtherText(e.target.value)}
+                        placeholder="Ex.: Musicoterapia, ABA"
+                        maxLength={500}
+                      />
+                    </label>
+                  ) : null}
+                </fieldset>
 
-            {targetType === "profissional" ? (
-              <fieldset style={{ border: "none", margin: "0 0 16px", padding: 0 }}>
-                <legend className="muted" style={{ fontSize: 13, marginBottom: 8, padding: 0 }}>
-                  Onde atende? *
-                </legend>
-                <label style={{ display: "flex", alignItems: "flex-start", gap: 8, marginBottom: 10, cursor: "pointer" }}>
-                  <input
-                    type="radio"
-                    name="attendance"
-                    checked={professionalAttendance === PROFESSIONAL_ATTENDANCE.at_clinic}
-                    onChange={() => setProfessionalAttendance(PROFESSIONAL_ATTENDANCE.at_clinic)}
-                  />
-                  <span>
-                    Em clínica ou consultório de terceiros
-                    <span className="muted" style={{ display: "block", fontSize: 12, marginTop: 2 }}>
-                      Não pedimos endereço completo do profissional; use o nome da clínica abaixo, se souber.
-                    </span>
-                  </span>
-                </label>
-                <label style={{ display: "flex", alignItems: "flex-start", gap: 8, marginBottom: 10, cursor: "pointer" }}>
-                  <input
-                    type="radio"
-                    name="attendance"
-                    checked={professionalAttendance === PROFESSIONAL_ATTENDANCE.own_office}
-                    onChange={() => setProfessionalAttendance(PROFESSIONAL_ATTENDANCE.own_office)}
-                  />
-                  <span>
-                    Consultório próprio
-                    <span className="muted" style={{ display: "block", fontSize: 12, marginTop: 2 }}>
-                      Pode informar endereço completo abaixo (opcional, mas ajuda no mapa).
-                    </span>
-                  </span>
-                </label>
-                <label style={{ display: "flex", alignItems: "flex-start", gap: 8, cursor: "pointer" }}>
-                  <input
-                    type="radio"
-                    name="attendance"
-                    checked={professionalAttendance === PROFESSIONAL_ATTENDANCE.other_location}
-                    onChange={() => setProfessionalAttendance(PROFESSIONAL_ATTENDANCE.other_location)}
-                  />
-                  <span>
-                    Outro local ou sem vínculo fixo com clínica
-                    <span className="muted" style={{ display: "block", fontSize: 12, marginTop: 2 }}>
-                      Endereço completo opcional, se quiser indicar onde costuma atender.
-                    </span>
-                  </span>
-                </label>
+                <fieldset style={{ border: "none", margin: "0 0 16px", padding: 0 }}>
+                  <legend className="muted" style={{ fontSize: 13, marginBottom: 8 }}>
+                    Convênios
+                  </legend>
+                  <div
+                    className="card"
+                    style={{
+                      maxHeight: 200,
+                      overflowY: "auto",
+                      padding: "10px 12px",
+                      border: "1px solid var(--color-divider)"
+                    }}
+                  >
+                    {insurances.map((row) => (
+                      <label
+                        key={row.id}
+                        style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6, cursor: "pointer" }}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={selectedInsuranceIds.includes(row.id)}
+                          onChange={(e) =>
+                            setSelectedInsuranceIds((prev) => toggleMulti(prev, row.id, e.target.checked))
+                          }
+                        />
+                        <span style={{ fontSize: 14 }}>{row.name}</span>
+                      </label>
+                    ))}
+                    <label style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 8, cursor: "pointer" }}>
+                      <input
+                        type="checkbox"
+                        checked={insuranceOtherOn}
+                        onChange={(e) =>
+                          setSelectedInsuranceIds((prev) => toggleMulti(prev, OTHER, e.target.checked))
+                        }
+                      />
+                      <span style={{ fontSize: 14, fontWeight: 600 }}>Outros…</span>
+                    </label>
+                  </div>
+                  {insuranceOtherOn ? (
+                    <label style={{ display: "block", marginTop: 10 }}>
+                      <span className="muted" style={{ display: "block", marginBottom: 6, fontSize: 13 }}>
+                        Descreva os convênios
+                      </span>
+                      <input
+                        className="input"
+                        value={insuranceOtherText}
+                        onChange={(e) => setInsuranceOtherText(e.target.value)}
+                        placeholder="Ex.: plano da empresa X"
+                        maxLength={500}
+                      />
+                    </label>
+                  ) : null}
+                </fieldset>
+              </>
+            ) : null}
 
-                {professionalAttendance === PROFESSIONAL_ATTENDANCE.at_clinic ? (
-                  <label style={{ display: "block", marginTop: 14 }}>
-                    <span className="muted" style={{ display: "block", marginBottom: 6, fontSize: 13 }}>
-                      Nome da clínica ou centro (opcional)
-                    </span>
-                    <input
-                      className="input"
-                      value={linkedClinicName}
-                      onChange={(e) => setLinkedClinicName(e.target.value)}
-                      placeholder="Ex.: Clínica Esperança"
-                      maxLength={200}
-                    />
-                  </label>
+            {targetType === "profissional" && !catalogLoading && !catalogError ? (
+              <label style={{ display: "block", marginBottom: 16 }}>
+                <span className="muted" style={{ display: "block", marginBottom: 6, fontSize: 13 }}>
+                  Clínica onde atende (opcional)
+                </span>
+                <select
+                  className="text-input"
+                  value={linkedClinicValue}
+                  onChange={(e) => {
+                    setLinkedClinicValue(e.target.value);
+                    if (e.target.value !== OTHER) setLinkedClinicOtherText("");
+                  }}
+                >
+                  <option value="">— Não informar —</option>
+                  {clinics.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name} — {c.city}
+                    </option>
+                  ))}
+                  <option value={OTHER}>Outros…</option>
+                </select>
+                {linkedClinicOtherOn ? (
+                  <input
+                    className="input"
+                    style={{ marginTop: 10 }}
+                    value={linkedClinicOtherText}
+                    onChange={(e) => setLinkedClinicOtherText(e.target.value)}
+                    placeholder="Nome da clínica (ainda não no cadastro)"
+                    maxLength={200}
+                  />
                 ) : null}
-              </fieldset>
+              </label>
             ) : null}
 
             <label style={{ display: "block", marginBottom: 16 }}>
@@ -259,24 +400,17 @@ export default function SugerirPage() {
               <input className="input" value={neighborhood} onChange={(e) => setNeighborhood(e.target.value)} />
             </label>
 
-            {targetType === "clinica" || showProfessionalAddress ? (
-              <label style={{ display: "block", marginBottom: 16 }}>
-                <span className="muted" style={{ display: "block", marginBottom: 6, fontSize: 13 }}>
-                  {targetType === "clinica" ? "Endereço (rua e número)" : "Endereço completo (opcional)"}
-                </span>
-                <input
-                  className="input"
-                  value={addressLine}
-                  onChange={(e) => setAddressLine(e.target.value)}
-                  placeholder={targetType === "clinica" ? "Para localização e busca no mapa" : "Se quiser aparecer no mapa ou facilitar a verificação"}
-                />
-                {targetType === "clinica" ? (
-                  <span className="muted" style={{ display: "block", marginTop: 6, fontSize: 12 }}>
-                    Quanto mais completo, melhor para famílias encontrarem o local.
-                  </span>
-                ) : null}
-              </label>
-            ) : null}
+            <label style={{ display: "block", marginBottom: 16 }}>
+              <span className="muted" style={{ display: "block", marginBottom: 6, fontSize: 13 }}>
+                Endereço (opcional)
+              </span>
+              <input
+                className="input"
+                value={addressLine}
+                onChange={(e) => setAddressLine(e.target.value)}
+                placeholder="Rua e número — útil para clínica ou consultório conhecido"
+              />
+            </label>
 
             <label style={{ display: "block", marginBottom: 16 }}>
               <span className="muted" style={{ display: "block", marginBottom: 6, fontSize: 13 }}>
@@ -308,7 +442,7 @@ export default function SugerirPage() {
                 {error}
               </p>
             ) : null}
-            <button type="submit" className="btn-primary" disabled={submitting}>
+            <button type="submit" className="btn-primary" disabled={submitting || catalogLoading || Boolean(catalogError)}>
               {submitting ? "Enviando…" : "Enviar sugestão"}
             </button>
           </form>

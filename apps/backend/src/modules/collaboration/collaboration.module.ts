@@ -1,5 +1,7 @@
 import { Module } from "@nestjs/common";
 import { TypeOrmModule } from "@nestjs/typeorm";
+import { InsuranceEntity } from "../catalog/entities/insurance.entity";
+import { SpecialtyEntity } from "../catalog/entities/specialty.entity";
 import { ClinicEntity } from "../listings/entities/clinic.entity";
 import { ProfessionalEntity } from "../professionals/entities/professional.entity";
 import { UserEntity } from "../users/entities/user.entity";
@@ -19,6 +21,8 @@ import { ProfileClaimsService } from "./profile-claims.service";
     TypeOrmModule.forFeature([
       UserEntity,
       ClinicEntity,
+      SpecialtyEntity,
+      InsuranceEntity,
       ProfessionalEntity,
       ClinicSuggestionEntity,
       ProfileClaimRequestEntity,
