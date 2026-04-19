@@ -515,7 +515,7 @@ export default function ClinicaDetailPage() {
               >
                 <p style={{ margin: 0, fontSize: 14, lineHeight: 1.55, color: "#134e4a" }}>
                   <strong>Área do proprietário.</strong> Quem visita vê os contatos e redes abaixo. Para alterar os
-                  dados, use o painel de administração ou o aplicativo OndeAcho.
+                  dados, use o painel de administração ou o aplicativo OndeAchoTEA.
                 </p>
               </div>
             ) : !isOwner ? (
@@ -528,7 +528,7 @@ export default function ClinicaDetailPage() {
                 ) : hasSession ? (
                   <>
                     Você é o responsável ou faz parte da equipe desta clínica? Solicite a reivindicação pelo{" "}
-                    <Link href="/suporte">suporte</Link> ou pelo aplicativo OndeAcho.
+                    <Link href="/suporte">suporte</Link> ou pelo aplicativo OndeAchoTEA.
                   </>
                 ) : (
                   <>

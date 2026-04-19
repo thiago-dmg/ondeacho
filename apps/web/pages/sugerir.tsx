@@ -198,7 +198,7 @@ export default function SugerirPage() {
         <p className="muted" style={{ marginBottom: 24 }}>
           {isProf
             ? "Sugestão rápida: só o essencial. Telefone, morada e notas podem ser completados depois pela equipa."
-            : "Ajude outras famílias: use as listas do OndeAcho quando possível. É necessário estar logado."}
+            : "Ajude outras famílias: use as listas do OndeAchoTEA quando possível. É necessário estar logado."}
         </p>
 
         {!token ? (
@@ -407,7 +407,7 @@ export default function SugerirPage() {
                         className="input"
                         value={linkedClinicOtherText}
                         onChange={(e) => setLinkedClinicOtherText(e.target.value)}
-                        placeholder="Nome da clínica ainda não no OndeAcho"
+                        placeholder="Nome da clínica ainda não no OndeAchoTEA"
                         maxLength={200}
                       />
                     </label>

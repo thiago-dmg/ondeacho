@@ -37,7 +37,7 @@ export default function SuportePage() {
   }
 
   return (
-    <SiteLayout title="Suporte" description="Fale com a equipa OndeAcho.">
+    <SiteLayout title="Suporte" description="Fale com a equipa OndeAchoTEA.">
       <div className="container" style={{ paddingTop: 36, paddingBottom: 56, maxWidth: 560 }}>
         <h1 style={{ fontSize: 28, marginBottom: 10 }}>Suporte</h1>
         <p className="muted" style={{ marginBottom: 28, lineHeight: 1.6 }}>

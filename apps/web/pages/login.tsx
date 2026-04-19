@@ -58,7 +58,7 @@ export default function LoginPage() {
       <div className="container" style={{ paddingTop: 40, paddingBottom: 48, maxWidth: 440 }}>
         <h1 style={{ fontSize: 26, marginBottom: 8 }}>{mode === "login" ? "Entrar" : "Criar conta"}</h1>
         <p className="muted" style={{ marginBottom: 24 }}>
-          Use a mesma conta do aplicativo OndeAcho (API compartilhada).
+          Use a mesma conta do aplicativo OndeAchoTEA (API compartilhada).
         </p>
 
         <div style={{ display: "flex", gap: 8, marginBottom: 20 }}>

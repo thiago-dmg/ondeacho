@@ -7,8 +7,10 @@ type Props = {
   children: React.ReactNode;
 };
 
-export function SiteLayout({ title = "OndeAcho", description, children }: Props) {
-  const fullTitle = title === "OndeAcho" ? title : `${title} · OndeAcho`;
+const SITE_NAME = "OndeAchoTEA";
+
+export function SiteLayout({ title = SITE_NAME, description, children }: Props) {
+  const fullTitle = title === SITE_NAME ? title : `${title} · ${SITE_NAME}`;
   return (
     <>
       <Head>
@@ -21,7 +23,7 @@ export function SiteLayout({ title = "OndeAcho", description, children }: Props)
       <footer style={{ borderTop: "1px solid var(--color-divider)", marginTop: 48, padding: "32px 0" }}>
         <div className="container">
           <p className="muted" style={{ margin: "0 0 12px", fontSize: 14 }}>
-            OndeAcho ajuda famílias a encontrar clínicas e profissionais para crianças com TEA e TDAH — fonoaudiologia,
+            OndeAchoTEA ajuda famílias a encontrar clínicas e profissionais para crianças com TEA e TDAH — fonoaudiologia,
             terapia ocupacional, psicologia infantil, neuropediatria e áreas relacionadas.
           </p>
           <p className="muted" style={{ margin: 0, fontSize: 13, lineHeight: 1.5 }}>
