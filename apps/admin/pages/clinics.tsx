@@ -12,6 +12,7 @@ type Clinic = {
   id: string;
   name: string;
   city: string;
+  stateUf?: string | null;
   neighborhood?: string | null;
   addressLine?: string | null;
   addressNumber?: string | null;
@@ -34,6 +35,7 @@ type Clinic = {
 type ClinicForm = {
   name: string;
   city: string;
+  stateUf: string;
   neighborhood: string;
   addressLine: string;
   addressNumber: string;
@@ -54,6 +56,7 @@ function emptyForm(): ClinicForm {
   return {
     name: "",
     city: "",
+    stateUf: "",
     neighborhood: "",
     addressLine: "",
     addressNumber: "",
@@ -72,9 +75,19 @@ function emptyForm(): ClinicForm {
 }
 
 function clinicToForm(c: Clinic): ClinicForm {
+  let city = c.city ?? "";
+  let stateUf = (c.stateUf ?? "").trim().toUpperCase().slice(0, 2);
+  if (!stateUf) {
+    const m = /,\s*([A-Z]{2})$/i.exec(city.trim());
+    if (m) {
+      stateUf = m[1].toUpperCase();
+      city = city.slice(0, m.index).trim();
+    }
+  }
   return {
     name: c.name,
-    city: c.city,
+    city,
+    stateUf,
     neighborhood: c.neighborhood ?? "",
     addressLine: c.addressLine ?? "",
     addressNumber: c.addressNumber ?? "",
@@ -104,6 +117,10 @@ function formToPayload(f: ClinicForm) {
   return {
     name: f.name.trim(),
     city: f.city.trim(),
+    stateUf: (() => {
+      const u = f.stateUf.trim().toUpperCase();
+      return u.length === 2 ? u : undefined;
+    })(),
     neighborhood: f.neighborhood.trim() || undefined,
     addressLine: f.addressLine.trim() || undefined,
     addressNumber: f.addressNumber.trim() || undefined,
@@ -189,13 +206,12 @@ function ClinicFormFields({
         if (!r) {
           return;
         }
-        const city =
-          r.localidade && r.uf ? `${r.localidade}, ${r.uf}` : r.localidade || "";
         setForm((p) => ({
           ...p,
           addressLine: r.logradouro ? r.logradouro : p.addressLine,
           neighborhood: r.bairro ? r.bairro : p.neighborhood,
-          city: city || p.city
+          city: r.localidade ? r.localidade : p.city,
+          stateUf: r.uf ? r.uf.toUpperCase().slice(0, 2) : p.stateUf
         }));
       })();
     }, 450);
@@ -233,6 +249,22 @@ function ClinicFormFields({
         />
       </div>
       <div className="oa-field">
+        <label className="oa-label" htmlFor="clinic-stateUf">
+          UF (estado)
+        </label>
+        <input
+          id="clinic-stateUf"
+          className="oa-input"
+          value={form.stateUf}
+          maxLength={2}
+          placeholder="SP"
+          style={{ maxWidth: 88 }}
+          onChange={(e) =>
+            setForm((p) => ({ ...p, stateUf: e.target.value.replace(/[^a-zA-Z]/g, "").toUpperCase().slice(0, 2) }))
+          }
+        />
+      </div>
+      <div className="oa-field">
         <label className="oa-label" htmlFor="clinic-neighborhood">
           Bairro
         </label>
@@ -257,7 +289,7 @@ function ClinicFormFields({
           onChange={(e) => setForm((p) => ({ ...p, zipcode: e.target.value }))}
         />
         <span className="oa-muted" style={{ fontSize: 12, marginTop: 4, display: "block" }}>
-          Com 8 dígitos buscamos ViaCEP e preenchemos logradouro, bairro e cidade (UF junto à cidade, se houver).
+          Com 8 dígitos buscamos ViaCEP e preenchemos logradouro, bairro, cidade e UF (silencioso se o CEP for inválido).
         </span>
       </div>
       <div className="oa-field">

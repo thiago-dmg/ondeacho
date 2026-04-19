@@ -13,6 +13,12 @@ export class UpsertClinicDto {
   @IsNotEmpty()
   city!: string;
 
+  @ApiProperty({ required: false, description: "UF (2 letras), ex.: SP" })
+  @IsOptional()
+  @IsString()
+  @MaxLength(2)
+  stateUf?: string;
+
   @ApiProperty({ required: false })
   @IsOptional()
   @IsString()

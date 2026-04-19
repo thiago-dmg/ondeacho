@@ -6,6 +6,7 @@ export type ClinicListing = {
   id: string;
   name: string;
   city: string;
+  stateUf?: string | null;
   neighborhood?: string | null;
   addressLine?: string | null;
   addressNumber?: string | null;

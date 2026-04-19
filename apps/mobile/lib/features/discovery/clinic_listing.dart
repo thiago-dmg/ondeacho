@@ -2,6 +2,8 @@ class ClinicListing {
   final String id;
   final String name;
   final String city;
+  /// UF (2 letras), quando a API envia separado da cidade.
+  final String? stateUf;
   final String? neighborhood;
   final String? addressLine;
   final String? addressNumber;
@@ -27,6 +29,7 @@ class ClinicListing {
     required this.id,
     required this.name,
     required this.city,
+    this.stateUf,
     this.neighborhood,
     this.addressLine,
     this.addressNumber,
@@ -61,6 +64,13 @@ class ClinicListing {
       id: json["id"]?.toString() ?? "",
       name: json["name"]?.toString() ?? "",
       city: json["city"]?.toString() ?? "",
+      stateUf: () {
+        final raw = (json["stateUf"] ?? "").toString().trim().toUpperCase();
+        if (raw.length < 2) {
+          return null;
+        }
+        return raw.substring(0, 2);
+      }(),
       neighborhood: json["neighborhood"]?.toString(),
       addressLine: json["addressLine"]?.toString(),
       addressNumber: json["addressNumber"]?.toString(),

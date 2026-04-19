@@ -14,12 +14,25 @@ function digitsOnly(value: string): string {
   return value.replace(/[^0-9]/g, "");
 }
 
+function cityWithUf(clinic: ClinicListing): string {
+  const city = (clinic.city ?? "").trim();
+  const uf = (clinic.stateUf ?? "").trim().toUpperCase();
+  if (!uf) {
+    return city;
+  }
+  const upper = city.toUpperCase();
+  if (upper.endsWith(`, ${uf}`) || upper.endsWith(`-${uf}`)) {
+    return city;
+  }
+  return city ? `${city}, ${uf}` : uf;
+}
+
 function buildAddress(clinic: ClinicListing): string {
   const street = [clinic.addressLine, clinic.addressNumber].filter(Boolean).join(", ");
-  const loc = [clinic.neighborhood, clinic.city].filter(Boolean).join(" — ");
+  const loc = [clinic.neighborhood, cityWithUf(clinic)].filter(Boolean).join(" — ");
   const primary = [street, loc].filter((s) => s.length > 0).join(" • ");
   if (!primary) {
-    return clinic.city;
+    return cityWithUf(clinic);
   }
   if (clinic.zipcode) {
     return `${primary} • CEP ${clinic.zipcode}`;
@@ -349,8 +362,8 @@ export default function ClinicaDetailPage() {
 
       <div className="container" style={{ paddingTop: 8, paddingBottom: 48 }}>
         <div className="clinica-detail-layout">
-          <section className="card clinica-detail-contato" style={{ padding: 22, display: "flex", flexDirection: "column", gap: 0 }}>
-            <h2 style={{ margin: "0 0 14px", fontSize: 22 }}>Contato e ações</h2>
+          <section className="card clinica-detail-comunicacao" style={{ padding: 22, display: "flex", flexDirection: "column", gap: 0 }}>
+            <h2 style={{ margin: "0 0 14px", fontSize: 22, letterSpacing: "-0.02em" }}>Contato e redes</h2>
 
             <div
               style={{
@@ -444,83 +457,65 @@ export default function ClinicaDetailPage() {
             {contactMsg ? (
               <p style={{ marginTop: 14, marginBottom: 0, color: "var(--color-primary)", fontWeight: 600 }}>{contactMsg}</p>
             ) : null}
-          </section>
 
-          <section
-            className="card clinica-detail-profissionais"
-            style={{
-              padding: 22,
-              display: "flex",
-              flexDirection: "column",
-              minHeight: 0
-            }}
-          >
-            <h2 style={{ margin: "0 0 14px", fontSize: 22 }}>Profissionais</h2>
-            <div style={{ flex: 1, minHeight: 100 }}>
-              {clinic.professionals.length === 0 ? (
-                <p className="muted" style={{ margin: 0 }}>
-                  Nenhum profissional listado.
+            <div className="clinica-detail-comunicacao__redes">
+              <h3>Site e redes</h3>
+              {!hasSocial ? (
+                <p className="muted" style={{ margin: 0, fontSize: 14 }}>
+                  Nenhum site ou rede social cadastrado.
                 </p>
               ) : (
-                <ul style={{ margin: 0, padding: 0, listStyle: "none" }}>
-                  {clinic.professionals.map((p, idx) => (
-                    <li
-                      key={p.id}
-                      style={{
-                        marginBottom: idx < clinic.professionals.length - 1 ? 14 : 0,
-                        paddingBottom: idx < clinic.professionals.length - 1 ? 14 : 0,
-                        borderBottom:
-                          idx < clinic.professionals.length - 1 ? "1px solid var(--color-divider)" : undefined
-                      }}
-                    >
-                      <div
-                        style={{
-                          fontSize: 16,
-                          lineHeight: 1.35,
-                          whiteSpace: "nowrap",
-                          overflow: "hidden",
-                          textOverflow: "ellipsis"
-                        }}
-                        title={p.crm ? `${p.name} — CRM ${p.crm}` : p.name}
-                      >
-                        <span style={{ fontWeight: 700, color: "#134e4a" }}>{p.name}</span>
-                        {p.crm ? (
-                          <span style={{ fontWeight: 400, color: "var(--color-muted)", marginLeft: 8 }}>
-                            — CRM {p.crm}
-                          </span>
-                        ) : null}
-                      </div>
-                    </li>
-                  ))}
-                </ul>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 10, alignItems: "center" }}>
+                  {siteHref ? (
+                    <SocialIconLink href={siteHref} label="Abrir site no navegador">
+                      <IconGlobe />
+                    </SocialIconLink>
+                  ) : null}
+                  {igHref ? (
+                    <SocialIconLink href={igHref} label="Abrir Instagram">
+                      <IconInstagram />
+                    </SocialIconLink>
+                  ) : null}
+                  {fbHref ? (
+                    <SocialIconLink href={fbHref} label="Abrir Facebook">
+                      <IconFacebook />
+                    </SocialIconLink>
+                  ) : null}
+                </div>
               )}
             </div>
           </section>
 
-          <section className="card clinica-detail-redes" style={{ padding: 22 }}>
-            <h2 style={{ margin: "0 0 12px", fontSize: 22 }}>Site e redes</h2>
-            {!hasSocial ? (
-              <p className="muted" style={{ margin: 0 }}>
-                Nenhum site ou rede social cadastrado.
+          <section className="clinica-detail-profissionais" aria-labelledby="clinica-profissionais-heading">
+            <h2 id="clinica-profissionais-heading" style={{ fontSize: 22, letterSpacing: "-0.02em" }}>
+              Profissionais
+            </h2>
+            {clinic.professionals.length === 0 ? (
+              <p className="muted" style={{ margin: 0, fontSize: 14 }}>
+                Nenhum profissional listado.
               </p>
             ) : (
-              <div style={{ display: "flex", flexWrap: "wrap", gap: 10, alignItems: "center" }}>
-                {siteHref ? (
-                  <SocialIconLink href={siteHref} label="Abrir site no navegador">
-                    <IconGlobe />
-                  </SocialIconLink>
-                ) : null}
-                {igHref ? (
-                  <SocialIconLink href={igHref} label="Abrir Instagram">
-                    <IconInstagram />
-                  </SocialIconLink>
-                ) : null}
-                {fbHref ? (
-                  <SocialIconLink href={fbHref} label="Abrir Facebook">
-                    <IconFacebook />
-                  </SocialIconLink>
-                ) : null}
-              </div>
+              <ul className="clinica-pro-list">
+                {clinic.professionals.map((p) => (
+                  <li key={p.id}>
+                    <div
+                      style={{
+                        fontSize: 16,
+                        lineHeight: 1.35,
+                        whiteSpace: "nowrap",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis"
+                      }}
+                      title={p.crm ? `${p.name} — ${p.crm}` : p.name}
+                    >
+                      <span style={{ fontWeight: 600, color: "#134e4a" }}>{p.name}</span>
+                      {p.crm ? (
+                        <span style={{ fontWeight: 400, color: "var(--color-muted)", marginLeft: 8 }}>— {p.crm}</span>
+                      ) : null}
+                    </div>
+                  </li>
+                ))}
+              </ul>
             )}
           </section>
 
@@ -531,28 +526,16 @@ export default function ClinicaDetailPage() {
                 padding: 0,
                 overflow: "hidden",
                 border: "1px solid var(--color-divider)",
-                boxShadow: "0 6px 20px rgba(15, 118, 110, 0.06)"
+                boxShadow: "0 1px 3px var(--color-shadow)"
               }}
             >
-              <div style={{ padding: "16px 18px 0" }}>
-                <h2 style={{ fontSize: 18, margin: 0 }}>Mapa</h2>
+              <div style={{ padding: "14px 18px 0" }}>
+                <h2 style={{ fontSize: 18, margin: 0, letterSpacing: "-0.02em" }}>Mapa</h2>
                 <p className="muted" style={{ fontSize: 13, margin: "6px 0 0", lineHeight: 1.45 }}>
                   Localização aproximada a partir do endereço cadastrado.
                 </p>
               </div>
-              <div
-                style={{
-                  marginTop: 10,
-                  width: "100%",
-                  maxWidth: 480,
-                  marginLeft: "auto",
-                  marginRight: "auto",
-                  aspectRatio: "2.2 / 1",
-                  minHeight: 120,
-                  maxHeight: 160,
-                  background: "var(--color-surface-muted, #e8f4f2)"
-                }}
-              >
+              <div className="clinica-mapa-frame" style={{ marginTop: 8 }}>
                 <iframe
                   title={`Mapa — ${clinic.name}`}
                   src={embedSrc}
@@ -579,14 +562,26 @@ export default function ClinicaDetailPage() {
         </div>
 
         {clinic.description ? (
-          <section style={{ marginTop: 22 }}>
-            <h2 style={{ fontSize: 18, marginBottom: 10 }}>Sobre</h2>
-            <p style={{ whiteSpace: "pre-wrap", maxWidth: 800, margin: 0, lineHeight: 1.6 }}>{clinic.description}</p>
+          <section style={{ marginTop: 32 }}>
+            <h2 style={{ fontSize: 22, margin: "0 0 12px", letterSpacing: "-0.02em" }}>Sobre</h2>
+            <p
+              className="muted"
+              style={{
+                whiteSpace: "pre-wrap",
+                maxWidth: 720,
+                margin: 0,
+                fontSize: 17,
+                lineHeight: 1.55,
+                color: "var(--color-text)"
+              }}
+            >
+              {clinic.description}
+            </p>
           </section>
         ) : null}
 
-        <section style={{ marginTop: 28 }}>
-          <h2 style={{ fontSize: 18 }}>Avaliações da comunidade</h2>
+        <section style={{ marginTop: 32 }}>
+          <h2 style={{ fontSize: 22, margin: "0 0 12px", letterSpacing: "-0.02em" }}>Avaliações da comunidade</h2>
           {reviews.length === 0 ? (
             <p className="muted">Nenhuma avaliação aprovada ainda.</p>
           ) : (

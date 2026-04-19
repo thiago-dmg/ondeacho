@@ -9,9 +9,18 @@ import "../clinic_listing.dart";
 
 String _digitsOnly(String value) => value.replaceAll(RegExp(r"[^0-9]"), "");
 
+String _cityWithUf(ClinicListing c) {
+  final city = c.city.trim();
+  final uf = (c.stateUf ?? "").trim().toUpperCase();
+  if (uf.length != 2) return city;
+  final upper = city.toUpperCase();
+  if (upper.endsWith(", $uf") || upper.endsWith("-$uf")) return city;
+  return city.isEmpty ? uf : "$city, $uf";
+}
+
 String _addressQuery(ClinicListing c) {
   final street = [c.addressLine, c.addressNumber].where((v) => (v ?? "").trim().isNotEmpty).join(", ");
-  final loc = [c.neighborhood, c.city].where((v) => (v ?? "").trim().isNotEmpty).join(" - ");
+  final loc = [c.neighborhood, _cityWithUf(c)].where((v) => v.trim().isNotEmpty).join(" - ");
   final primary = [street, loc].where((v) => v.isNotEmpty).join(" • ");
   if (primary.isEmpty) {
     return c.city;

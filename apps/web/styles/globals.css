@@ -182,38 +182,82 @@ select.text-input:focus {
   }
 }
 
-/* Página clínica: mobile = contato → redes → profissionais → mapa; desktop = grid 2×2 */
+/* Página clínica: mobile = contato+redes → profissionais → mapa; desktop: linha1 2 col, linha2 mapa largura total */
 .clinica-detail-layout {
   display: flex;
   flex-direction: column;
   gap: 20px;
 }
 
-.clinica-detail-contato {
+.clinica-detail-comunicacao {
   order: 1;
 }
 
-.clinica-detail-redes {
-  order: 2;
-}
-
-.clinica-detail-profissionais {
+.clinica-detail-mapa {
   order: 3;
 }
 
-.clinica-detail-mapa {
-  order: 4;
+.clinica-detail-comunicacao__redes {
+  margin-top: 22px;
+  padding-top: 20px;
+  border-top: 1px solid var(--color-divider);
+}
+
+.clinica-detail-comunicacao__redes h3 {
+  margin: 0 0 12px;
+  font-size: 17px;
+  font-weight: 700;
+  color: #134e4a;
+  letter-spacing: -0.02em;
+}
+
+.clinica-detail-profissionais {
+  order: 2;
+  padding: 2px 0 0;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+}
+
+.clinica-detail-profissionais h2 {
+  margin: 0 0 10px;
+  font-size: 22px;
+  letter-spacing: -0.02em;
+}
+
+.clinica-pro-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.clinica-pro-list li {
+  padding: 10px 0;
+  border-bottom: 1px solid var(--color-divider);
+}
+
+.clinica-pro-list li:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.clinica-mapa-frame {
+  width: 100%;
+  max-height: 200px;
+  min-height: 160px;
+  height: 200px;
+  background: var(--color-surface-muted, #e8f4f2);
 }
 
 @media (min-width: 768px) {
   .clinica-detail-layout {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 20px 24px;
-    align-items: stretch;
+    gap: 24px;
+    align-items: start;
   }
 
-  .clinica-detail-contato {
+  .clinica-detail-comunicacao {
     grid-column: 1;
     grid-row: 1;
     order: unset;
@@ -223,17 +267,20 @@ select.text-input:focus {
     grid-column: 2;
     grid-row: 1;
     order: unset;
-  }
-
-  .clinica-detail-redes {
-    grid-column: 1;
-    grid-row: 2;
-    order: unset;
+    padding: 6px 0 0 4px;
   }
 
   .clinica-detail-mapa {
-    grid-column: 2;
+    grid-column: 1 / -1;
     grid-row: 2;
     order: unset;
+  }
+}
+
+@media (max-width: 767px) {
+  .clinica-mapa-frame {
+    max-height: 180px;
+    min-height: 140px;
+    height: 180px;
   }
 }

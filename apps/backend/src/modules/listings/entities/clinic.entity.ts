@@ -24,6 +24,10 @@ export class ClinicEntity {
   @Column({ length: 120 })
   city!: string;
 
+  /** UF (ex.: SP), opcional — preenchível via CEP. */
+  @Column({ name: "state_uf", type: "varchar", length: 2, nullable: true })
+  stateUf!: string | null;
+
   @Column({ type: "varchar", length: 120, nullable: true })
   neighborhood!: string | null;
 

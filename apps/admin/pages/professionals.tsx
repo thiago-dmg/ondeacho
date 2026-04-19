@@ -29,6 +29,7 @@ type ProfForm = {
   name: string;
   crm: string;
   city: string;
+  stateUf: string;
   neighborhood: string;
   clinicId: string;
   rating: string;
@@ -43,6 +44,7 @@ function emptyForm(): ProfForm {
     name: "",
     crm: "",
     city: "",
+    stateUf: "",
     neighborhood: "",
     clinicId: "",
     rating: "0",
@@ -54,10 +56,18 @@ function emptyForm(): ProfForm {
 }
 
 function profToForm(p: Professional): ProfForm {
+  let city = p.city ?? "";
+  let stateUf = "";
+  const m = /,\s*([A-Z]{2})$/i.exec(city.trim());
+  if (m) {
+    stateUf = m[1].toUpperCase();
+    city = city.slice(0, m.index).trim();
+  }
   return {
     name: p.name,
     crm: p.crm ?? "",
-    city: p.city,
+    city,
+    stateUf,
     neighborhood: p.neighborhood ?? "",
     clinicId: p.clinicId ?? "",
     rating: String(p.rating ?? 0),
@@ -78,10 +88,13 @@ type ProfessionalsPageResponse = {
 
 function formToPayload(f: ProfForm) {
   const rating = Math.min(5, Math.max(0, Number.parseFloat(f.rating) || 0));
+  const baseCity = f.city.trim().replace(/,\s*[A-Z]{2}$/i, "").trim();
+  const uf = f.stateUf.trim().toUpperCase();
+  const city = uf.length === 2 && baseCity ? `${baseCity}, ${uf}` : f.city.trim();
   return {
     name: f.name.trim(),
     crm: f.crm.trim() || undefined,
-    city: f.city.trim(),
+    city,
     neighborhood: f.neighborhood.trim() || undefined,
     clinicId: f.clinicId.trim() || undefined,
     rating,
@@ -156,11 +169,10 @@ function ProfFormFields({
         if (!r) {
           return;
         }
-        const city =
-          r.localidade && r.uf ? `${r.localidade}, ${r.uf}` : r.localidade || "";
         setForm((p) => ({
           ...p,
-          ...(city ? { city } : {}),
+          ...(r.localidade ? { city: r.localidade } : {}),
+          ...(r.uf ? { stateUf: r.uf.toUpperCase().slice(0, 2) } : {}),
           ...(r.bairro ? { neighborhood: r.bairro } : {})
         }));
       })();
@@ -214,7 +226,7 @@ function ProfFormFields({
           onChange={(e) => setCepLookup(e.target.value)}
         />
         <span className="oa-muted" style={{ fontSize: 12, marginTop: 4, display: "block" }}>
-          Com 8 dígitos preenchemos cidade (e UF) e bairro; não é salvo no cadastro do profissional.
+          Com 8 dígitos preenchemos cidade, UF e bairro; o CEP em si não é salvo no cadastro.
         </span>
       </div>
       <div className="oa-field">
@@ -227,6 +239,22 @@ function ProfFormFields({
           value={form.city}
           onChange={(e) => setForm((p) => ({ ...p, city: e.target.value }))}
           required
+        />
+      </div>
+      <div className="oa-field">
+        <label className="oa-label" htmlFor="pf-stateUf">
+          UF (estado)
+        </label>
+        <input
+          id="pf-stateUf"
+          className="oa-input"
+          value={form.stateUf}
+          maxLength={2}
+          placeholder="SP"
+          style={{ maxWidth: 88 }}
+          onChange={(e) =>
+            setForm((p) => ({ ...p, stateUf: e.target.value.replace(/[^a-zA-Z]/g, "").toUpperCase().slice(0, 2) }))
+          }
         />
       </div>
       <div className="oa-field">

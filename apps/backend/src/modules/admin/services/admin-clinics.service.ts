@@ -140,6 +140,7 @@ export class AdminClinicsService {
 
     const clinic = this.clinicsRepository.create({
       ...dto,
+      stateUf: (dto.stateUf?.trim() ?? "").length === 2 ? dto.stateUf!.trim().toUpperCase() : null,
       description: dto.description ?? null,
       neighborhood: dto.neighborhood ?? null,
       addressLine: dto.addressLine ?? null,
@@ -170,6 +171,12 @@ export class AdminClinicsService {
 
     Object.assign(clinic, {
       ...dto,
+      stateUf:
+        dto.stateUf !== undefined
+          ? dto.stateUf.trim().length === 2
+            ? dto.stateUf.trim().toUpperCase()
+            : null
+          : clinic.stateUf,
       description: dto.description ?? clinic.description,
       neighborhood: dto.neighborhood ?? clinic.neighborhood,
       addressLine: dto.addressLine ?? clinic.addressLine,

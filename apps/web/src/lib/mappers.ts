@@ -33,6 +33,10 @@ export function parseClinic(raw: Record<string, unknown>): ClinicListing {
     id: String(raw.id ?? ""),
     name: String(raw.name ?? ""),
     city: String(raw.city ?? ""),
+    stateUf:
+      raw.stateUf != null && String(raw.stateUf).trim() !== ""
+        ? String(raw.stateUf).trim().toUpperCase().slice(0, 2)
+        : null,
     neighborhood: raw.neighborhood != null ? String(raw.neighborhood) : null,
     addressLine: raw.addressLine != null ? String(raw.addressLine) : null,
     addressNumber: raw.addressNumber != null ? String(raw.addressNumber) : null,
