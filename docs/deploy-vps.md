@@ -113,6 +113,8 @@ Para subir o admin como serviço na VPS, o passo típico é `next build` com `ou
 
 Este erro aparece nos jobs **deploy-production** e **deploy-admin** quando o runner do GitHub **não consegue abrir TCP na porta SSH** até ao `VPS_SSH_HOST`. Não indica bug no código do repositório; é **conectividade ou firewall**. O workflow inclui um passo **«Testar TCP SSH até a VPS»** antes do SCP; se falhar aí, o log aponta para este guia.
 
+Esse passo usa **`nc -z -w 2`** (ou `timeout 2` + `/dev/tcp/` como fallback): cada tentativa tem **cerca de 2 segundos** no máximo. Antigas versões só com `echo >/dev/tcp/…` podiam **bloquear vários minutos** numa única tentativa quando a porta estava filtrada — por isso o job parecia «preso» sem mensagens.
+
 ### Checklist rápido
 
 1. **`VPS_SSH_HOST`** (secret) — IP ou hostname correctos? Teste no teu PC: `ssh -i chave.pem -p PORTA VPS_SSH_USER@VPS_SSH_HOST` (ou `Test-NetConnection HOST -Port PORTA` no PowerShell). A porta por defeito no workflow é **22**.

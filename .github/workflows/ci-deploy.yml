@@ -256,13 +256,23 @@ jobs:
           SSH_PORT: ${{ steps.ssh_port.outputs.port }}
         run: |
           set -u
-          echo "A testar TCP (até ~28s)…"
+          # /dev/tcp/ sem limite pode bloquear minutos por tentativa (SYN retransmit).
+          # nc -w2 ou timeout 2s: cada tentativa falha rápido; no máx. ~15*(2+1)≈45s no total.
+          tcp_probe() {
+            if command -v nc >/dev/null 2>&1; then
+              nc -z -w 2 "${SSH_HOST}" "${SSH_PORT}"
+            else
+              timeout 2 bash -c "echo >/dev/tcp/${SSH_HOST}/${SSH_PORT}" 2>/dev/null
+            fi
+          }
+          echo "A testar TCP na porta SSH (máx. ~2s por tentativa, até 15 tentativas)…"
           ok=0
-          for _ in $(seq 1 28); do
-            if (echo >/dev/tcp/"${SSH_HOST}/${SSH_PORT}") 2>/dev/null; then
+          for i in $(seq 1 15); do
+            if tcp_probe; then
               ok=1
               break
             fi
+            echo "  tentativa ${i}/15…"
             sleep 1
           done
           if [ "$ok" != "1" ]; then
@@ -468,12 +478,21 @@ jobs:
           SSH_PORT: ${{ steps.ssh_port_admin.outputs.port }}
         run: |
           set -u
+          tcp_probe() {
+            if command -v nc >/dev/null 2>&1; then
+              nc -z -w 2 "${SSH_HOST}" "${SSH_PORT}"
+            else
+              timeout 2 bash -c "echo >/dev/tcp/${SSH_HOST}/${SSH_PORT}" 2>/dev/null
+            fi
+          }
+          echo "A testar TCP na porta SSH (máx. ~2s por tentativa, até 15 tentativas)…"
           ok=0
-          for _ in $(seq 1 28); do
-            if (echo >/dev/tcp/"${SSH_HOST}/${SSH_PORT}") 2>/dev/null; then
+          for i in $(seq 1 15); do
+            if tcp_probe; then
               ok=1
               break
             fi
+            echo "  tentativa ${i}/15…"
             sleep 1
           done
           if [ "$ok" != "1" ]; then
