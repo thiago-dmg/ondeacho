@@ -13,6 +13,19 @@ const _kAtClinic = "at_clinic";
 const _kOwnOffice = "own_office";
 const _kOtherLocation = "other_location";
 
+String _professionalAttendanceHint(String mode) {
+  switch (mode) {
+    case _kAtClinic:
+      return "Sem endereço completo do profissional; indique a clínica abaixo se souber.";
+    case _kOwnOffice:
+      return "Pode informar endereço completo abaixo (opcional).";
+    case _kOtherLocation:
+      return "Endereço completo opcional, se quiser indicar onde costuma atender.";
+    default:
+      return "";
+  }
+}
+
 class SuggestClinicPage extends ConsumerStatefulWidget {
   const SuggestClinicPage({super.key});
 
@@ -235,35 +248,39 @@ class _SuggestClinicPageState extends ConsumerState<SuggestClinicPage> {
                 title: "Onde atende?",
                 subtitle: "Define se pedimos endereço completo."
               ),
-              RadioListTile<String>(
-                title: const Text("Em clínica ou consultório de terceiros"),
-                subtitle: const Text(
-                  "Sem endereço completo do profissional; indique a clínica abaixo se souber.",
-                  style: TextStyle(fontSize: 12)
-                ),
-                value: _kAtClinic,
-                groupValue: _professionalAttendance,
-                onChanged: (v) => setState(() => _professionalAttendance = v ?? _kAtClinic)
+              SegmentedButton<String>(
+                segments: const [
+                  ButtonSegment<String>(
+                    value: _kAtClinic,
+                    label: Text("Clínica"),
+                    tooltip: "Em clínica ou consultório de terceiros"
+                  ),
+                  ButtonSegment<String>(
+                    value: _kOwnOffice,
+                    label: Text("Próprio"),
+                    tooltip: "Consultório próprio"
+                  ),
+                  ButtonSegment<String>(
+                    value: _kOtherLocation,
+                    label: Text("Outro"),
+                    tooltip: "Outro local ou sem vínculo fixo"
+                  )
+                ],
+                selected: {_professionalAttendance},
+                emptySelectionAllowed: false,
+                multiSelectionEnabled: false,
+                onSelectionChanged: (Set<String> next) {
+                  if (next.isEmpty) return;
+                  setState(() => _professionalAttendance = next.first);
+                }
               ),
-              RadioListTile<String>(
-                title: const Text("Consultório próprio"),
-                subtitle: const Text(
-                  "Pode informar endereço completo abaixo (opcional).",
-                  style: TextStyle(fontSize: 12)
-                ),
-                value: _kOwnOffice,
-                groupValue: _professionalAttendance,
-                onChanged: (v) => setState(() => _professionalAttendance = v ?? _kOwnOffice)
-              ),
-              RadioListTile<String>(
-                title: const Text("Outro local ou sem vínculo fixo"),
-                subtitle: const Text(
-                  "Endereço completo opcional.",
-                  style: TextStyle(fontSize: 12)
-                ),
-                value: _kOtherLocation,
-                groupValue: _professionalAttendance,
-                onChanged: (v) => setState(() => _professionalAttendance = v ?? _kOtherLocation)
+              const SizedBox(height: 10),
+              Text(
+                _professionalAttendanceHint(_professionalAttendance),
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: AppColors.textSecondary,
+                      height: 1.35
+                    )
               ),
               if (_professionalAttendance == _kAtClinic) ...[
                 const SizedBox(height: 8),
