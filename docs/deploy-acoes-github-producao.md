@@ -32,6 +32,7 @@ Isto continua a ser configuração de **infraestrutura**, feita uma vez:
 | Secret | `VPS_SSH_HOST` | Sim |
 | Secret | `VPS_SSH_USER` | Sim |
 | Secret | `VPS_SSH_KEY` | Sim (chave privada PEM) |
+| Variable | `VPS_SSH_PORT` | Não — por defeito **22**. Use se o `sshd` da VPS ouvir outra porta (o workflow e o teste TCP usam este valor). |
 | Secret ou Variable | `NEXT_PUBLIC_API_URL` | Não — por defeito `/api/v1` (proxy no Next → API local) |
 | Secret ou Variable | `NEXT_PUBLIC_SITE_URL` | Não — por defeito `https://ondeachotea.com` |
 

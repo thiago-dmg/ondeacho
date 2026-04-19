@@ -1,12 +1,13 @@
 # CI (Node + Flutter) e deploy para produção na VPS (API + site + migrações) num único fluxo em push para main.
 #
 # Secrets obrigatórios: VPS_SSH_HOST, VPS_SSH_USER, VPS_SSH_KEY
-# Variáveis opcionais (GitHub → Settings → Variables): NEXT_PUBLIC_API_URL, NEXT_PUBLIC_SITE_URL
+# Variáveis opcionais (GitHub → Settings → Variables): NEXT_PUBLIC_API_URL, NEXT_PUBLIC_SITE_URL, VPS_SSH_PORT
 #
 # Na VPS (uma vez): systemd `ondeacho-api` (:3000) e `ondeacho-web` (:3002); Nginx → proxy só para Node
 # (não sirvas `/_next/static` a partir de disco). Ver docs/deploy-acoes-github-producao.md
 #
-# Falha «dial tcp …:22: i/o timeout»: docs/deploy-vps.md (firewall / SSH).
+# Falha «dial tcp …:22: i/o timeout»: rede/firewall na VPS (ver docs/deploy-vps.md).
+# Opcional: variável de repositório VPS_SSH_PORT se o sshd não estiver na 22.
 
 name: CI and Deploy
 
@@ -238,13 +239,47 @@ jobs:
           WantedBy=multi-user.target
           EOF
 
+      - name: Porta SSH (Variable VPS_SSH_PORT ou 22)
+        id: ssh_port
+        run: |
+          set -euo pipefail
+          P="${{ vars.VPS_SSH_PORT }}"
+          P="${P:-}"
+          P="${P// /}"
+          if [ -z "$P" ]; then P=22; fi
+          echo "port=${P}" >> "$GITHUB_OUTPUT"
+          echo "::notice::SSH porta ${P}"
+
+      - name: Testar TCP SSH até a VPS
+        env:
+          SSH_HOST: ${{ secrets.VPS_SSH_HOST }}
+          SSH_PORT: ${{ steps.ssh_port.outputs.port }}
+        run: |
+          set -u
+          echo "A testar TCP (até ~28s)…"
+          ok=0
+          for _ in $(seq 1 28); do
+            if (echo >/dev/tcp/"${SSH_HOST}/${SSH_PORT}") 2>/dev/null; then
+              ok=1
+              break
+            fi
+            sleep 1
+          done
+          if [ "$ok" != "1" ]; then
+            echo '::error::Timeout TCP à VPS (SSH). Confirme: VPS ligada, secret VPS_SSH_HOST, firewall a aceitar a porta nos runners GitHub (IPs dinâmicos), ou defina a variável VPS_SSH_PORT. Guia: docs/deploy-vps.md'
+            exit 1
+          fi
+          echo "TCP OK."
+
       - name: Upload artefactos para VPS
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.VPS_SSH_HOST }}
           username: ${{ secrets.VPS_SSH_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
-          port: 22
+          port: ${{ steps.ssh_port.outputs.port }}
+          timeout: 3m
+          command_timeout: 15m
           source: "ondeacho-api.tar.gz,ondeacho-web.tar.gz,ondeacho-api.service,ondeacho-web.service"
           target: "/tmp/deploy-prod-${{ github.run_id }}"
           overwrite: true
@@ -255,7 +290,9 @@ jobs:
           host: ${{ secrets.VPS_SSH_HOST }}
           username: ${{ secrets.VPS_SSH_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
-          port: 22
+          port: ${{ steps.ssh_port.outputs.port }}
+          timeout: 3m
+          command_timeout: 20m
           script_stop: true
           script: |
             set -eu
@@ -415,13 +452,44 @@ jobs:
           WantedBy=multi-user.target
           EOF
 
+      - name: Porta SSH (Variable VPS_SSH_PORT ou 22)
+        id: ssh_port_admin
+        run: |
+          set -euo pipefail
+          P="${{ vars.VPS_SSH_PORT }}"
+          P="${P:-}"
+          P="${P// /}"
+          if [ -z "$P" ]; then P=22; fi
+          echo "port=${P}" >> "$GITHUB_OUTPUT"
+
+      - name: Testar TCP SSH até a VPS
+        env:
+          SSH_HOST: ${{ secrets.VPS_SSH_HOST }}
+          SSH_PORT: ${{ steps.ssh_port_admin.outputs.port }}
+        run: |
+          set -u
+          ok=0
+          for _ in $(seq 1 28); do
+            if (echo >/dev/tcp/"${SSH_HOST}/${SSH_PORT}") 2>/dev/null; then
+              ok=1
+              break
+            fi
+            sleep 1
+          done
+          if [ "$ok" != "1" ]; then
+            echo '::error::Timeout TCP à VPS (SSH). Ver docs/deploy-vps.md e variável VPS_SSH_PORT se necessário.'
+            exit 1
+          fi
+
       - name: Upload package to VPS
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.VPS_SSH_HOST }}
           username: ${{ secrets.VPS_SSH_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
-          port: 22
+          port: ${{ steps.ssh_port_admin.outputs.port }}
+          timeout: 3m
+          command_timeout: 15m
           source: "ondeacho-admin.tar.gz,ondeacho-admin.service"
           target: "/tmp/deploy-admin-${{ github.run_id }}"
           overwrite: true
@@ -432,7 +500,9 @@ jobs:
           host: ${{ secrets.VPS_SSH_HOST }}
           username: ${{ secrets.VPS_SSH_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
-          port: 22
+          port: ${{ steps.ssh_port_admin.outputs.port }}
+          timeout: 3m
+          command_timeout: 20m
           script_stop: true
           script: |
             set -e

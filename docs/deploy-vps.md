@@ -109,16 +109,16 @@ O admin usa **`NEXT_PUBLIC_API_URL`** (URL completa com `/api/v1`). O repositór
 
 Para subir o admin como serviço na VPS, o passo típico é `next build` com `output: 'standalone'`, empacotar a pasta gerada pelo build + estáticos e um unit systemd — pode ser um segundo workflow quando quiser. Em Linux/macOS o `distDir` é `apps/admin/.next-build`; no Windows o build usa `../../.admin-next-build` (raiz do monorepo) para evitar erros de permissão no arquivo `trace`.
 
-## GitHub Actions: `dial tcp …:22: i/o timeout` no passo «Upload package to VPS»
+## GitHub Actions: `dial tcp …:22: i/o timeout` (ou timeout na porta que configurou)
 
-Este erro aparece nos jobs **deploy-api**, **deploy-admin** e **deploy-web** quando o runner do GitHub **não consegue abrir TCP na porta 22** até ao `VPS_SSH_HOST`. Não indica bug no código do repositório; é **conectividade ou firewall**.
+Este erro aparece nos jobs **deploy-production** e **deploy-admin** quando o runner do GitHub **não consegue abrir TCP na porta SSH** até ao `VPS_SSH_HOST`. Não indica bug no código do repositório; é **conectividade ou firewall**. O workflow inclui um passo **«Testar TCP SSH até a VPS»** antes do SCP; se falhar aí, o log aponta para este guia.
 
 ### Checklist rápido
 
-1. **`VPS_SSH_HOST`** (secret) — IP ou hostname correctos? Teste no teu PC: `ssh -i chave.pem VPS_SSH_USER@VPS_SSH_HOST` (ou `Test-NetConnection HOST -Port 22` no PowerShell).
+1. **`VPS_SSH_HOST`** (secret) — IP ou hostname correctos? Teste no teu PC: `ssh -i chave.pem -p PORTA VPS_SSH_USER@VPS_SSH_HOST` (ou `Test-NetConnection HOST -Port PORTA` no PowerShell). A porta por defeito no workflow é **22**.
 2. **VPS ligada** — painel Hostinger / cloud a mostrar a máquina em execução.
-3. **Firewall da VPS / painel** — tem de existir regra **a aceitar SSH (TCP 22)** a partir da Internet (ou pelo menos a partir de redes que o GitHub Actions use). Os IPs dos runners **mudam**; uma whitelist só de «IPs conhecidos» costuma falhar ou exigir [lista oficial](https://api.github.com/meta) (`actions` em `hooks`) actualizada com frequência. Na prática, muitos projectos deixam **22 aberto ao mundo** e reforçam com **chave SSH + desactivar password + fail2ban**.
-4. **Porta SSH** — se mudaste a SSH da VPS para outra porta (ex. 2222), o workflow continua a usar **22**; ou alteras o `sshd` de volta para 22, ou terias de estender o workflow (o `appleboy/scp-action` / `ssh-action` suporta `port`).
+3. **Firewall da VPS / painel** — tem de existir regra **a aceitar SSH (TCP na porta usada)** a partir da Internet (ou pelo menos a partir de redes que o GitHub Actions use). Os IPs dos runners **mudam**; uma whitelist só de «IPs conhecidos» costuma falhar ou exigir [lista oficial](https://api.github.com/meta) (`actions` em `hooks`) actualizada com frequência. Na prática, muitos projectos deixam **22 aberto ao mundo** e reforçam com **chave SSH + desactivar password + fail2ban**.
+4. **Porta SSH** — se o `sshd` da VPS não estiver na **22**, defina a variável de repositório **`VPS_SSH_PORT`** (ex. `2222`). O `appleboy/scp-action` e o `ssh-action` usam essa porta; o passo de teste TCP também.
 
 ### Depois de corrigir rede/firewall
 
