@@ -123,9 +123,10 @@ export default function LoginPage() {
             />
           </label>
           {mode === "login" ? (
-            <div style={{ marginBottom: 16, textAlign: "right" }}>
+            <div style={{ margin: "-8px 0 16px", textAlign: "right" }}>
               <Link
                 href="/esqueci-senha"
+                prefetch={false}
                 style={{
                   color: "var(--color-primary)",
                   fontWeight: 700,
@@ -146,6 +147,35 @@ export default function LoginPage() {
           <button type="submit" className="btn-primary" style={{ width: "100%" }} disabled={submitting}>
             {submitting ? "Aguarde…" : mode === "login" ? "Entrar" : "Cadastrar"}
           </button>
+          {mode === "login" ? (
+            <div
+              style={{
+                marginTop: 14,
+                paddingTop: 14,
+                borderTop: "1px solid var(--color-divider)",
+                textAlign: "center"
+              }}
+            >
+              <Link
+                href="/esqueci-senha"
+                prefetch={false}
+                style={{
+                  display: "inline-block",
+                  color: "var(--color-primary)",
+                  fontWeight: 800,
+                  fontSize: 16,
+                  textDecoration: "underline",
+                  textUnderlineOffset: 4,
+                  padding: "6px 4px"
+                }}
+              >
+                Esqueci minha senha
+              </Link>
+              <p className="muted" style={{ margin: "10px 0 0", fontSize: 13, lineHeight: 1.45 }}>
+                Enviaremos um e-mail com o link para criar uma nova senha (válido por 1 hora).
+              </p>
+            </div>
+          ) : null}
         </form>
 
         <p style={{ marginTop: 20 }} className="muted">

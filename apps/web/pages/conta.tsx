@@ -89,18 +89,39 @@ export default function ContaPage() {
         ) : null}
 
         <div className="card" style={{ padding: 22, marginBottom: 20 }}>
-          <p style={{ margin: "0 0 12px" }}>
+          <p style={{ margin: "0 0 8px" }}>
             <strong>Perfil:</strong> {profile.role}
           </p>
-          <p className="muted" style={{ margin: "0 0 16px", fontSize: 14 }}>
-            Precisa de ajuda?{" "}
+          <p className="muted" style={{ margin: "0 0 16px", fontSize: 14, lineHeight: 1.5 }}>
+            Aqui podes <strong>alterar a senha</strong> ou <strong>encerrar a conta</strong>. Precisa de ajuda?{" "}
             <Link href="/suporte" style={{ fontWeight: 600 }}>
-              Contactar suporte
+              Suporte
             </Link>
           </p>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
+            <a href="#alterar-senha" className="btn-ghost" style={{ textDecoration: "none", padding: "10px 16px" }}>
+              Ir para alterar senha
+            </a>
+            <a
+              href="#excluir-conta"
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                padding: "10px 16px",
+                borderRadius: 12,
+                border: "1px solid #dc2626",
+                color: "#b91c1c",
+                fontWeight: 700,
+                fontSize: 14,
+                textDecoration: "none"
+              }}
+            >
+              Ir para excluir conta
+            </a>
+          </div>
         </div>
 
-        <div className="card" style={{ padding: 22, marginBottom: 20 }}>
+        <div id="alterar-senha" className="card" style={{ padding: 22, marginBottom: 20, scrollMarginTop: 88 }}>
           <h2 style={{ fontSize: 17, margin: "0 0 14px" }}>Alterar senha</h2>
           <form onSubmit={onChangePassword}>
             <label style={{ display: "block", marginBottom: 12 }}>
@@ -136,7 +157,17 @@ export default function ContaPage() {
           </form>
         </div>
 
-        <div className="card" style={{ padding: 22, marginBottom: 24, borderColor: "rgba(220, 38, 38, 0.35)", background: "#fef2f2" }}>
+        <div
+          id="excluir-conta"
+          className="card"
+          style={{
+            padding: 22,
+            marginBottom: 24,
+            borderColor: "rgba(220, 38, 38, 0.45)",
+            background: "#fef2f2",
+            scrollMarginTop: 88
+          }}
+        >
           <h2 style={{ fontSize: 17, margin: "0 0 8px", color: "#991b1b" }}>Excluir conta</h2>
           <p className="muted" style={{ margin: "0 0 14px", fontSize: 14 }}>
             Remove o utilizador e dados associados conforme as regras da plataforma.

@@ -167,6 +167,20 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                 ? const [AutofillHints.newPassword]
                 : const [AutofillHints.password]
           ),
+          if (!_registerMode) ...[
+            const SizedBox(height: 12),
+            Align(
+              alignment: Alignment.centerRight,
+              child: TextButton(
+                onPressed: authState.loading ? null : () => context.push("/forgot-password"),
+                style: TextButton.styleFrom(
+                  foregroundColor: AppColors.primary,
+                  textStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15)
+                ),
+                child: const Text("Esqueci minha senha")
+              )
+            )
+          ],
           const SizedBox(height: 20),
           FilledButton(
             onPressed: authState.loading ? null : _submit,
@@ -176,6 +190,24 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                   : (_registerMode ? "Criar conta" : "Entrar")
             )
           ),
+          if (!_registerMode) ...[
+            const SizedBox(height: 10),
+            Center(
+              child: TextButton(
+                onPressed: authState.loading ? null : () => context.push("/forgot-password"),
+                style: TextButton.styleFrom(
+                  foregroundColor: AppColors.primary,
+                  textStyle: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16)
+                ),
+                child: const Text("Esqueci minha senha"),
+              )
+            ),
+            Text(
+              "Enviaremos um e-mail com o link para redefinir a senha.",
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppColors.textSecondary),
+            )
+          ],
           const SizedBox(height: 12),
           TextButton(
             onPressed: authState.loading
@@ -192,13 +224,6 @@ class _LoginPageState extends ConsumerState<LoginPage> {
               _registerMode ? "Já tenho conta — entrar" : "Não tenho conta — criar conta"
             )
           ),
-          if (!_registerMode) ...[
-            const SizedBox(height: 8),
-            TextButton(
-              onPressed: authState.loading ? null : () => context.push("/forgot-password"),
-              child: const Text("Esqueci minha senha")
-            )
-          ],
           if (authState.error != null) ...[
             const SizedBox(height: 12),
             Text(

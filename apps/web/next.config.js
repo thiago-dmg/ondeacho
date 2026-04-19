@@ -18,6 +18,14 @@ const webApiProxyTarget = (process.env.WEB_API_PROXY_TARGET || "http://127.0.0.1
 const nextConfig = {
   reactStrictMode: true,
   distDir: getDistDir(),
+  async redirects() {
+    return [
+      { source: "/Conta", destination: "/conta", permanent: false },
+      { source: "/Login", destination: "/login", permanent: false },
+      { source: "/Esqueci-senha", destination: "/esqueci-senha", permanent: false },
+      { source: "/esqueci-Senha", destination: "/esqueci-senha", permanent: false }
+    ];
+  },
   async rewrites() {
     return [
       {
