@@ -10,3 +10,4 @@ dist/
 .next/
 .next-build/
 .admin-next-build/
+.web-next-build/
