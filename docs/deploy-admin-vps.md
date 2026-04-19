@@ -42,6 +42,15 @@ O admin escuta na **3001**. No painel da **Hostinger → Firewall da VPS**, tens
 
 Para produção é melhor **Nginx na 80/443** a fazer proxy para `http://127.0.0.1:3001` e **não** expor a 3001 na internet.
 
+### O site (`ondeachotea.com`) funciona mas `admin.ondeachotea.com` não
+
+São **configurações separadas**: o bloco Nginx do site **não** ativa o admin.
+
+1. **DNS** — registo **A** `admin` → mesmo IP da VPS. Teste: `dig +short admin.ondeachotea.com A`.
+2. **Serviço** — `curl -sI http://127.0.0.1:3001/` na VPS tem de ser **200**; senão: `sudo systemctl status ondeacho-admin`.
+3. **Nginx** — ficheiro com `server_name admin.ondeachotea.com` e `proxy_pass http://127.0.0.1:3001`, com symlink em `sites-enabled`; `sudo nginx -t && sudo systemctl reload nginx`.
+4. **Certificado TLS** para **`admin.ondeachotea.com`** (ex.: `certbot --nginx -d admin.ondeachotea.com`). O cert do site **não** cobre o subdomínio `admin` por defeito.
+
 ## Nginx (exemplo — `admin.ondeachotea.com`)
 
 Use o mesmo IP da VPS; certificado TLS para o host `admin`. Exemplo alinhado ao site e à API: [`nginx-ondeachotea-exemplo.conf`](./nginx-ondeachotea-exemplo.conf).
