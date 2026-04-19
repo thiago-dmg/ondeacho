@@ -267,23 +267,6 @@ export default function ClinicaDetailPage() {
     }
   };
 
-  const sendContact = async (channel: "whatsapp" | "phone" | "email") => {
-    if (!getWebToken() || !clinic) {
-      void router.push(`/login?from=${encodeURIComponent(router.asPath)}`);
-      return;
-    }
-    setContactMsg(null);
-    try {
-      await apiRequest("/contacts", {
-        method: "POST",
-        body: JSON.stringify({ clinicId: clinic.id, preferredChannel: channel, message: "" })
-      });
-      setContactMsg("Interesse registrado com sucesso.");
-    } catch (e) {
-      setContactMsg(e instanceof Error ? e.message : "Erro ao registrar contato.");
-    }
-  };
-
   if (!router.isReady || loading) {
     return (
       <SiteLayout title="Clínica">
@@ -433,30 +416,31 @@ export default function ClinicaDetailPage() {
                 }}
               >
                 <p style={{ margin: 0, fontSize: 14, lineHeight: 1.55, color: "#134e4a" }}>
-                  <strong>Área do proprietário.</strong> Quem visita vê os contatos e redes abaixo; para alterar os
-                  dados, use o painel de administração ou o app. Os botões &quot;registrar interesse&quot; não aparecem aqui para
-                  evitar confusão com o seu próprio perfil.
+                  <strong>Área do proprietário.</strong> Quem visita vê os contatos e redes abaixo. Para alterar os
+                  dados, use o painel de administração ou o aplicativo OndeAcho.
                 </p>
               </div>
-            ) : hasSession && !isOwner ? (
-              <div style={{ display: "flex", flexWrap: "wrap", gap: 10, marginTop: 18 }}>
-                {wa ? (
-                  <button type="button" className="btn-primary" onClick={() => void sendContact("whatsapp")}>
-                    Registrar interesse (WhatsApp)
-                  </button>
-                ) : null}
-                {phone ? (
-                  <button type="button" className="btn-ghost" onClick={() => void sendContact("phone")}>
-                    Registrar interesse (telefone)
-                  </button>
-                ) : null}
-              </div>
-            ) : (
-              <p className="muted" style={{ marginTop: 14, marginBottom: 0 }}>
-                <Link href={`/login?from=${encodeURIComponent(router.asPath)}`}>Entre</Link> para registrar interesse
-                na clínica.
+            ) : !isOwner ? (
+              <p className="muted" style={{ marginTop: 18, marginBottom: 0, fontSize: 14, lineHeight: 1.6 }}>
+                {clinic.isClaimed ? (
+                  <>
+                    Este perfil já foi reivindicado. Para correção de dados ou dúvidas, use a página de{" "}
+                    <Link href="/suporte">suporte</Link>.
+                  </>
+                ) : hasSession ? (
+                  <>
+                    Você é o responsável ou faz parte da equipe desta clínica? Solicite a reivindicação pelo{" "}
+                    <Link href="/suporte">suporte</Link> ou pelo aplicativo OndeAcho.
+                  </>
+                ) : (
+                  <>
+                    Você é o responsável ou faz parte da equipe desta clínica?{" "}
+                    <Link href={`/login?from=${encodeURIComponent(router.asPath)}`}>Entre na sua conta</Link> e acesse o{" "}
+                    <Link href="/suporte">suporte</Link> para solicitar a reivindicação do perfil.
+                  </>
+                )}
               </p>
-            )}
+            ) : null}
             {contactMsg ? (
               <p style={{ marginTop: 14, marginBottom: 0, color: "var(--color-primary)", fontWeight: 600 }}>{contactMsg}</p>
             ) : null}
