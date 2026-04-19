@@ -69,7 +69,7 @@ Inclua `http://localhost:3001` e `http://localhost:3002` apenas em desenvolvimen
 | Cliente | Variável | Exemplo produção |
 |---------|----------|------------------|
 | Web pública (`apps/web`) | `NEXT_PUBLIC_API_URL` | **`/api/v1`** (padrão no repo: mesmo host + proxy Next) ou `https://api.ondeachotea.com/api/v1` se o subdomínio `api` existir |
-| Admin (`apps/admin`) | `NEXT_PUBLIC_API_URL` | `https://api.ondeachotea.com/api/v1` |
+| Admin (`apps/admin`) | `NEXT_PUBLIC_API_URL` | **`/api/v1`** (padrão no repo) ou URL absoluta `https://api...` se o subdomínio `api` existir |
 | Mobile (Flutter) | `--dart-define=API_BASE_URL=...` ou default no código | `https://api.ondeachotea.com/api/v1` |
 
 A URL deve incluir o prefixo **`/api/v1`**.

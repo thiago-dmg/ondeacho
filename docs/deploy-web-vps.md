@@ -118,6 +118,13 @@ Significa: **o Nginx está a correr**, mas **não há resposta válida** do Next
 
 **Commit/push no Git** não corrige o 502 **sozinho** enquanto não existir job de deploy do `apps/web` na Actions: tens de **build + arrancar o serviço na VPS** (manual ou script), como fizeste para o admin.
 
+## “Failed to fetch” na página (catálogos, login, etc.)
+
+Com **`NEXT_PUBLIC_API_URL=/api/v1`**, o pedido vai para **o mesmo host** do site e o Next encaminha para **`127.0.0.1:3000`**. Se ainda falhar:
+
+1. Na VPS: `curl -sS http://127.0.0.1:3000/api/v1/health` — tem de responder. Se **Connection refused**, o serviço **Nest** (`ondeacho-api`) **não está a correr** ou está noutra porta.
+2. Confirma que fizeste **`git pull`** e **novo `npm run build --workspace apps/web`** depois da alteração para `/api/v1` (build antigo ainda pode apontar para `https://api...`).
+
 ## “Não seguro” no Chrome
 
 Pode ser certificado inválido/expirado, **cert só para outro nome** (ex.: só `www`), ou site a abrir por **HTTP** com extensão a marcar HTTPS. Depois de o 502 passar, valida com `sudo certbot certificates` e o `server_name` no Nginx a coincidir com o domínio do cert.

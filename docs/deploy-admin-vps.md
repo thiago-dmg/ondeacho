@@ -6,9 +6,11 @@ O job **deploy-admin** do workflow único `.github/workflows/ci-deploy.yml` publ
 
 1. **Secrets** (já usados pelo deploy da API): `VPS_SSH_HOST`, `VPS_SSH_USER`, `VPS_SSH_KEY`.
 
-2. **`NEXT_PUBLIC_API_URL`** — em produção com domínios separados (recomendado), defina **`https://api.ondeachotea.com/api/v1`** no **build** (ficheiro `apps/admin/.env.production` ou secret `NEXT_PUBLIC_API_URL` no GitHub). O browser chama a API diretamente; configure **`CORS_ORIGINS`** no Nest com **`https://admin.ondeachotea.com`**.
+2. **`NEXT_PUBLIC_API_URL`** — o **`apps/admin/.env.production`** versionado usa **`/api/v1`**: o browser chama **`https://admin.ondeachotea.com/api/v1/...`** e o Next faz *rewrite* para o Nest (`ADMIN_API_PROXY_TARGET`, default `http://127.0.0.1:3000`). **Não depende** de DNS para `api.ondeachotea.com`.
 
-   O modo **proxy** do Next (`/api/v1` → `127.0.0.1:3000` sem variável) só faz sentido quando o admin e a API partilham a **mesma origem** no browser; com **`https://admin...`** e **`https://api...`** use sempre a URL absoluta da API.
+   Se no GitHub Actions definiste o secret **`NEXT_PUBLIC_API_URL`** com `https://api.ondeachotea.com/...`, isso **sobrescreve** o `.env.production` no build — ou remove o secret, ou define-o para **`/api/v1`**, senão o login volta a falhar sem DNS `api`.
+
+   Para usar só o subdomínio `api` (URL absoluta), garante DNS + TLS e CORS no Nest para `https://admin.ondeachotea.com`.
 
 ## Login admin em produção
 
