@@ -38,16 +38,12 @@ export default function SugerirPage() {
   const [insuranceOtherText, setInsuranceOtherText] = useState("");
   const [linkedClinicValue, setLinkedClinicValue] = useState("");
   const [linkedClinicOtherText, setLinkedClinicOtherText] = useState("");
+  const [draftClinicCity, setDraftClinicCity] = useState("");
 
   const specialtyOtherOn = useMemo(() => selectedSpecialtyIds.includes(OTHER), [selectedSpecialtyIds]);
   const insuranceOtherOn = useMemo(() => selectedInsuranceIds.includes(OTHER), [selectedInsuranceIds]);
   const linkedClinicOtherOn = linkedClinicValue === OTHER;
-
-  useEffect(() => {
-    if (targetType === "profissional" && linkedClinicValue !== OTHER) {
-      setAddressLine("");
-    }
-  }, [targetType, linkedClinicValue]);
+  const isProf = targetType === "profissional";
 
   useEffect(() => {
     let cancelled = false;
@@ -117,8 +113,18 @@ export default function SugerirPage() {
       setError("Descreva os convênios em «Outros» ou desmarque a opção.");
       return;
     }
-    if (linkedClinicOtherOn && !linkedClinicOtherText.trim()) {
-      setError('Indique o nome da clínica em «Outros» ou escolha outra opção.');
+    if (isProf && linkedClinicOtherOn) {
+      if (!linkedClinicOtherText.trim()) {
+        setError("Indique o nome da clínica.");
+        return;
+      }
+      if (!draftClinicCity.trim()) {
+        setError("Indique a cidade da clínica.");
+        return;
+      }
+    }
+    if (isProf && !linkedClinicOtherOn && !city.trim()) {
+      setError("Indique a cidade.");
       return;
     }
 
@@ -127,21 +133,21 @@ export default function SugerirPage() {
       const specialtyIds = selectedSpecialtyIds.filter((id) => id !== OTHER);
       const insuranceIds = selectedInsuranceIds.filter((id) => id !== OTHER);
 
-      const includeAddress =
-        targetType === "clinica" || (targetType === "profissional" && linkedClinicOtherOn);
-
       const body: Record<string, unknown> = {
         targetType,
         name: name.trim(),
-        city: city.trim(),
-        neighborhood: neighborhood.trim() || undefined,
-        addressLine: includeAddress && addressLine.trim() ? addressLine.trim() : undefined,
-        phone: phone.trim() || undefined,
-        whatsappPhone: whatsappPhone.trim() || undefined,
+        city: isProf && linkedClinicOtherOn ? draftClinicCity.trim() : city.trim(),
         specialtyIds,
-        insuranceIds,
-        observations: observations.trim() || undefined
+        insuranceIds
       };
+
+      if (!isProf) {
+        body.neighborhood = neighborhood.trim() || undefined;
+        body.addressLine = addressLine.trim() || undefined;
+        body.phone = phone.trim() || undefined;
+        body.whatsappPhone = whatsappPhone.trim() || undefined;
+        body.observations = observations.trim() || undefined;
+      }
 
       if (specialtyOtherOn) {
         body.specialtyOther = specialtyOtherText.trim();
@@ -150,7 +156,7 @@ export default function SugerirPage() {
         body.insuranceOther = insuranceOtherText.trim();
       }
 
-      if (targetType === "profissional") {
+      if (isProf) {
         body.professionalCrm = professionalCrm.trim() || undefined;
         if (linkedClinicValue && linkedClinicValue !== OTHER) {
           body.linkedClinicId = linkedClinicValue;
@@ -190,7 +196,9 @@ export default function SugerirPage() {
       <div className="container" style={{ paddingTop: 28, paddingBottom: 48, maxWidth: 560 }}>
         <h1 style={{ fontSize: 26, marginBottom: 8 }}>Sugerir clínica ou profissional</h1>
         <p className="muted" style={{ marginBottom: 24 }}>
-          Ajude outras famílias: use as listas do OndeAcho quando possível. É necessário estar logado.
+          {isProf
+            ? "Sugestão rápida: só o essencial. Telefone, morada e notas podem ser completados depois pela equipa."
+            : "Ajude outras famílias: use as listas do OndeAcho quando possível. É necessário estar logado."}
         </p>
 
         {!token ? (
@@ -219,6 +227,7 @@ export default function SugerirPage() {
                   setTargetType(e.target.value as "clinica" | "profissional");
                   setLinkedClinicValue("");
                   setLinkedClinicOtherText("");
+                  setDraftClinicCity("");
                 }}
               >
                 <option value="clinica">Clínica</option>
@@ -233,7 +242,7 @@ export default function SugerirPage() {
               <input className="input" value={name} onChange={(e) => setName(e.target.value)} required minLength={3} />
             </label>
 
-            {targetType === "profissional" ? (
+            {isProf ? (
               <label style={{ display: "block", marginBottom: 16 }}>
                 <span className="muted" style={{ display: "block", marginBottom: 6, fontSize: 13 }}>
                   CRM ou registro profissional (opcional)
@@ -362,96 +371,122 @@ export default function SugerirPage() {
               </>
             ) : null}
 
-            {targetType === "profissional" && !catalogLoading && !catalogError ? (
-              <label style={{ display: "block", marginBottom: 16 }}>
-                <span className="muted" style={{ display: "block", marginBottom: 6, fontSize: 13 }}>
-                  Clínica onde atende (opcional)
-                </span>
-                <select
-                  className="text-input"
-                  value={linkedClinicValue}
-                  onChange={(e) => {
-                    setLinkedClinicValue(e.target.value);
-                    if (e.target.value !== OTHER) setLinkedClinicOtherText("");
-                  }}
-                >
-                  <option value="">— Não informar —</option>
-                  {clinics.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.name} — {c.city}
-                    </option>
-                  ))}
-                  <option value={OTHER}>Outros…</option>
-                </select>
+            {isProf && !catalogLoading && !catalogError ? (
+              <>
+                <label style={{ display: "block", marginBottom: 16 }}>
+                  <span className="muted" style={{ display: "block", marginBottom: 6, fontSize: 13 }}>
+                    Clínica onde atende (opcional)
+                  </span>
+                  <select
+                    className="text-input"
+                    value={linkedClinicValue}
+                    onChange={(e) => {
+                      setLinkedClinicValue(e.target.value);
+                      if (e.target.value !== OTHER) {
+                        setLinkedClinicOtherText("");
+                        setDraftClinicCity("");
+                      }
+                    }}
+                  >
+                    <option value="">— Não informar —</option>
+                    {clinics.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.name} — {c.city}
+                      </option>
+                    ))}
+                    <option value={OTHER}>Outros…</option>
+                  </select>
+                </label>
                 {linkedClinicOtherOn ? (
-                  <input
-                    className="input"
-                    style={{ marginTop: 10 }}
-                    value={linkedClinicOtherText}
-                    onChange={(e) => setLinkedClinicOtherText(e.target.value)}
-                    placeholder="Nome da clínica (ainda não no cadastro)"
-                    maxLength={200}
-                  />
-                ) : null}
-              </label>
+                  <>
+                    <label style={{ display: "block", marginBottom: 16 }}>
+                      <span className="muted" style={{ display: "block", marginBottom: 6, fontSize: 13 }}>
+                        Nome da clínica *
+                      </span>
+                      <input
+                        className="input"
+                        value={linkedClinicOtherText}
+                        onChange={(e) => setLinkedClinicOtherText(e.target.value)}
+                        placeholder="Nome da clínica ainda não no OndeAcho"
+                        maxLength={200}
+                      />
+                    </label>
+                    <label style={{ display: "block", marginBottom: 16 }}>
+                      <span className="muted" style={{ display: "block", marginBottom: 6, fontSize: 13 }}>
+                        Cidade da clínica *
+                      </span>
+                      <input
+                        className="input"
+                        value={draftClinicCity}
+                        onChange={(e) => setDraftClinicCity(e.target.value)}
+                        required={linkedClinicOtherOn}
+                        minLength={2}
+                      />
+                    </label>
+                  </>
+                ) : (
+                  <label style={{ display: "block", marginBottom: 16 }}>
+                    <span className="muted" style={{ display: "block", marginBottom: 6, fontSize: 13 }}>
+                      Cidade *
+                    </span>
+                    <input className="input" value={city} onChange={(e) => setCity(e.target.value)} required minLength={2} />
+                  </label>
+                )}
+              </>
             ) : null}
 
-            <label style={{ display: "block", marginBottom: 16 }}>
-              <span className="muted" style={{ display: "block", marginBottom: 6, fontSize: 13 }}>
-                Cidade *
-              </span>
-              <input className="input" value={city} onChange={(e) => setCity(e.target.value)} required minLength={2} />
-            </label>
-            <label style={{ display: "block", marginBottom: 16 }}>
-              <span className="muted" style={{ display: "block", marginBottom: 6, fontSize: 13 }}>
-                Bairro (opcional)
-              </span>
-              <input className="input" value={neighborhood} onChange={(e) => setNeighborhood(e.target.value)} />
-            </label>
+            {!isProf ? (
+              <>
+                <label style={{ display: "block", marginBottom: 16 }}>
+                  <span className="muted" style={{ display: "block", marginBottom: 6, fontSize: 13 }}>
+                    Cidade *
+                  </span>
+                  <input className="input" value={city} onChange={(e) => setCity(e.target.value)} required minLength={2} />
+                </label>
+                <label style={{ display: "block", marginBottom: 16 }}>
+                  <span className="muted" style={{ display: "block", marginBottom: 6, fontSize: 13 }}>
+                    Bairro (opcional)
+                  </span>
+                  <input className="input" value={neighborhood} onChange={(e) => setNeighborhood(e.target.value)} />
+                </label>
+                <label style={{ display: "block", marginBottom: 16 }}>
+                  <span className="muted" style={{ display: "block", marginBottom: 6, fontSize: 13 }}>
+                    Endereço (opcional)
+                  </span>
+                  <input
+                    className="input"
+                    value={addressLine}
+                    onChange={(e) => setAddressLine(e.target.value)}
+                    placeholder="Rua e número — ajuda no mapa e na busca"
+                  />
+                </label>
+                <label style={{ display: "block", marginBottom: 16 }}>
+                  <span className="muted" style={{ display: "block", marginBottom: 6, fontSize: 13 }}>
+                    Telefone
+                  </span>
+                  <input className="input" value={phone} onChange={(e) => setPhone(e.target.value)} />
+                </label>
+                <label style={{ display: "block", marginBottom: 16 }}>
+                  <span className="muted" style={{ display: "block", marginBottom: 6, fontSize: 13 }}>
+                    WhatsApp
+                  </span>
+                  <input className="input" value={whatsappPhone} onChange={(e) => setWhatsappPhone(e.target.value)} />
+                </label>
+                <label style={{ display: "block", marginBottom: 20 }}>
+                  <span className="muted" style={{ display: "block", marginBottom: 6, fontSize: 13 }}>
+                    Observações
+                  </span>
+                  <textarea
+                    className="input"
+                    rows={4}
+                    value={observations}
+                    onChange={(e) => setObservations(e.target.value)}
+                    style={{ resize: "vertical" }}
+                  />
+                </label>
+              </>
+            ) : null}
 
-            {(targetType === "clinica" || linkedClinicOtherOn) && (
-              <label style={{ display: "block", marginBottom: 16 }}>
-                <span className="muted" style={{ display: "block", marginBottom: 6, fontSize: 13 }}>
-                  {targetType === "clinica" ? "Endereço (opcional)" : "Endereço da nova clínica (opcional)"}
-                </span>
-                <input
-                  className="input"
-                  value={addressLine}
-                  onChange={(e) => setAddressLine(e.target.value)}
-                  placeholder={
-                    targetType === "clinica"
-                      ? "Rua e número — ajuda no mapa e na busca"
-                      : "Rua e número da clínica indicada em «Outros»"
-                  }
-                />
-              </label>
-            )}
-
-            <label style={{ display: "block", marginBottom: 16 }}>
-              <span className="muted" style={{ display: "block", marginBottom: 6, fontSize: 13 }}>
-                Telefone
-              </span>
-              <input className="input" value={phone} onChange={(e) => setPhone(e.target.value)} />
-            </label>
-            <label style={{ display: "block", marginBottom: 16 }}>
-              <span className="muted" style={{ display: "block", marginBottom: 6, fontSize: 13 }}>
-                WhatsApp
-              </span>
-              <input className="input" value={whatsappPhone} onChange={(e) => setWhatsappPhone(e.target.value)} />
-            </label>
-
-            <label style={{ display: "block", marginBottom: 20 }}>
-              <span className="muted" style={{ display: "block", marginBottom: 6, fontSize: 13 }}>
-                Observações
-              </span>
-              <textarea
-                className="input"
-                rows={4}
-                value={observations}
-                onChange={(e) => setObservations(e.target.value)}
-                style={{ resize: "vertical" }}
-              />
-            </label>
             {error ? (
               <p style={{ color: "#b45309", marginBottom: 12 }} role="alert">
                 {error}
