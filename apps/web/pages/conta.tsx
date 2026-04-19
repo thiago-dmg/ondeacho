@@ -170,7 +170,7 @@ export default function ContaPage() {
         >
           <h2 style={{ fontSize: 17, margin: "0 0 8px", color: "#991b1b" }}>Excluir conta</h2>
           <p className="muted" style={{ margin: "0 0 14px", fontSize: 14 }}>
-            Remove o utilizador e dados associados conforme as regras da plataforma.
+            Remove a conta e os dados associados conforme as regras da plataforma.
           </p>
           <form onSubmit={onDeleteAccount}>
             <label style={{ display: "block", marginBottom: 14 }}>

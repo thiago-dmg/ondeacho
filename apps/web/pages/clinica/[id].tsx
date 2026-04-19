@@ -319,14 +319,21 @@ export default function ClinicaDetailPage() {
 
   return (
     <SiteLayout title={clinic.name} description={clinic.description ?? undefined}>
-      <div className="container" style={{ paddingTop: 24, paddingBottom: 48 }}>
-        <div style={{ marginBottom: 18 }}>
-          <Link href="/clinicas" className="muted" style={{ fontWeight: 600 }}>
-            ← Voltar à lista
-          </Link>
-        </div>
+      <section
+        style={{
+          background: "linear-gradient(180deg, #ecfdf5 0%, var(--color-bg) 52%)",
+          padding: "28px 0 8px",
+          marginBottom: 8
+        }}
+      >
+        <div className="container">
+          <div style={{ marginBottom: 14 }}>
+            <Link href="/clinicas" className="muted" style={{ fontWeight: 600 }}>
+              ← Voltar à lista
+            </Link>
+          </div>
 
-        <header style={{ marginBottom: 22 }}>
+          <header style={{ marginBottom: 0 }}>
           <div style={{ display: "flex", flexWrap: "wrap", gap: 12, alignItems: "center" }}>
             <h1 style={{ fontSize: "clamp(1.35rem, 3vw, 1.95rem)", margin: 0, lineHeight: 1.2 }}>{clinic.name}</h1>
             {clinic.isVerified ? (
@@ -338,7 +345,7 @@ export default function ClinicaDetailPage() {
               <span className="badge badge-teal">Perfil reivindicado</span>
             ) : null}
           </div>
-          <p className="muted" style={{ marginTop: 10, fontSize: 15, lineHeight: 1.5 }}>
+          <p className="muted" style={{ marginTop: 10, fontSize: 17, lineHeight: 1.55, maxWidth: 720 }}>
             {buildAddress(clinic)}
           </p>
           {summary && summary.reviewCount > 0 && summary.averageRating != null ? (
@@ -349,15 +356,18 @@ export default function ClinicaDetailPage() {
               </span>
             </div>
           ) : (
-            <p className="muted" style={{ marginTop: 12, marginBottom: 0 }}>
+            <p className="muted" style={{ marginTop: 12, marginBottom: 0, fontSize: 15 }}>
               Ainda não há avaliações aprovadas nesta clínica.
             </p>
           )}
-        </header>
+          </header>
+        </div>
+      </section>
 
+      <div className="container" style={{ paddingTop: 8, paddingBottom: 48 }}>
         <div className="clinica-detail-layout">
           <section className="card clinica-detail-contato" style={{ padding: 22, display: "flex", flexDirection: "column", gap: 0 }}>
-            <h2 style={{ margin: "0 0 14px", fontSize: 18 }}>Contato e ações</h2>
+            <h2 style={{ margin: "0 0 14px", fontSize: 22 }}>Contato e ações</h2>
 
             <div
               style={{
@@ -386,26 +396,26 @@ export default function ClinicaDetailPage() {
                 <p style={{ margin: 0, fontWeight: 700, fontSize: 15, color: "#134e4a" }}>Favoritos</p>
                 <p className="muted" style={{ margin: "6px 0 0", fontSize: 14, lineHeight: 1.45 }}>
                   {!hasSession
-                    ? "Entre para guardar esta clínica e aceder mais rápido depois."
+                    ? "Entre para salvar esta clínica e acessar mais rápido depois."
                     : isOwner
-                      ? "Como dono do perfil, usa o coração para marcar a tua clínica nos favoritos (igual à app)."
-                      : "Marca a clínica nos favoritos para encontrares mais tarde."}
+                      ? "Como dono do perfil, use o coração para marcar sua clínica nos favoritos (igual ao app)."
+                      : "Salve a clínica nos favoritos para encontrar depois com facilidade."}
                 </p>
               </div>
             </div>
 
             {phone ? (
-              <p style={{ margin: "4px 0" }}>
-                Telefone:{" "}
-                <a href={`tel:${phoneDigits}`} style={{ fontWeight: 600 }}>
+              <p style={{ margin: "8px 0", fontSize: 15, lineHeight: 1.5, color: "var(--color-text)" }}>
+                <span className="muted" style={{ marginRight: 8 }}>Telefone</span>
+                <a href={`tel:${phoneDigits}`} className="inline-action-link">
                   {phone}
                 </a>
               </p>
             ) : null}
             {wa ? (
-              <p style={{ margin: "4px 0" }}>
-                WhatsApp:{" "}
-                <a href={`https://wa.me/${waDigits}`} target="_blank" rel="noopener noreferrer">
+              <p style={{ margin: "8px 0", fontSize: 15, lineHeight: 1.5, color: "var(--color-text)" }}>
+                <span className="muted" style={{ marginRight: 8 }}>WhatsApp</span>
+                <a href={`https://wa.me/${waDigits}`} className="inline-action-link" target="_blank" rel="noopener noreferrer">
                   {wa}
                 </a>
               </p>
@@ -423,9 +433,9 @@ export default function ClinicaDetailPage() {
                 }}
               >
                 <p style={{ margin: 0, fontSize: 14, lineHeight: 1.55, color: "#134e4a" }}>
-                  <strong>Área do proprietário.</strong> Quem visita vê os contactos e redes abaixo; para alterar
-                  dados usa o painel de administração ou a app. Os botões «registrar interesse» não aparecem aqui para
-                  evitares confusão com o teu próprio perfil.
+                  <strong>Área do proprietário.</strong> Quem visita vê os contatos e redes abaixo; para alterar os
+                  dados, use o painel de administração ou o app. Os botões &quot;registrar interesse&quot; não aparecem aqui para
+                  evitar confusão com o seu próprio perfil.
                 </p>
               </div>
             ) : hasSession && !isOwner ? (
@@ -461,7 +471,7 @@ export default function ClinicaDetailPage() {
               minHeight: 0
             }}
           >
-            <h2 style={{ margin: "0 0 14px", fontSize: 18 }}>Profissionais</h2>
+            <h2 style={{ margin: "0 0 14px", fontSize: 22 }}>Profissionais</h2>
             <div style={{ flex: 1, minHeight: 100 }}>
               {clinic.professionals.length === 0 ? (
                 <p className="muted" style={{ margin: 0 }}>
@@ -479,12 +489,23 @@ export default function ClinicaDetailPage() {
                           idx < clinic.professionals.length - 1 ? "1px solid var(--color-divider)" : undefined
                       }}
                     >
-                      <div style={{ fontWeight: 700, fontSize: 16, color: "#134e4a" }}>{p.name}</div>
-                      {p.crm ? (
-                        <div className="muted" style={{ fontSize: 13, marginTop: 4, letterSpacing: "0.02em" }}>
-                          CRM {p.crm}
-                        </div>
-                      ) : null}
+                      <div
+                        style={{
+                          fontSize: 16,
+                          lineHeight: 1.35,
+                          whiteSpace: "nowrap",
+                          overflow: "hidden",
+                          textOverflow: "ellipsis"
+                        }}
+                        title={p.crm ? `${p.name} — CRM ${p.crm}` : p.name}
+                      >
+                        <span style={{ fontWeight: 700, color: "#134e4a" }}>{p.name}</span>
+                        {p.crm ? (
+                          <span style={{ fontWeight: 400, color: "var(--color-muted)", marginLeft: 8 }}>
+                            — CRM {p.crm}
+                          </span>
+                        ) : null}
+                      </div>
                     </li>
                   ))}
                 </ul>
@@ -493,7 +514,7 @@ export default function ClinicaDetailPage() {
           </section>
 
           <section className="card clinica-detail-redes" style={{ padding: 22 }}>
-            <h2 style={{ margin: "0 0 12px", fontSize: 18 }}>Site e redes</h2>
+            <h2 style={{ margin: "0 0 12px", fontSize: 22 }}>Site e redes</h2>
             {!hasSocial ? (
               <p className="muted" style={{ margin: 0 }}>
                 Nenhum site ou rede social cadastrado.
@@ -530,7 +551,7 @@ export default function ClinicaDetailPage() {
               }}
             >
               <div style={{ padding: "16px 18px 0" }}>
-                <h2 style={{ fontSize: 17, margin: 0 }}>Mapa</h2>
+                <h2 style={{ fontSize: 18, margin: 0 }}>Mapa</h2>
                 <p className="muted" style={{ fontSize: 13, margin: "6px 0 0", lineHeight: 1.45 }}>
                   Localização aproximada a partir do endereço cadastrado.
                 </p>

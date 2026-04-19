@@ -76,8 +76,8 @@ export default function RedefinirSenhaPage() {
         <div className="oa-card" style={{ maxWidth: 440, padding: 28, textAlign: "center" }}>
           <p className="oa-muted" style={{ margin: 0 }}>
             {redirectingToWeb
-              ? "A abrir o site público para definir a nova senha…"
-              : "A carregar…"}
+              ? "Abrindo o site público para definir a nova senha…"
+              : "Carregando…"}
           </p>
         </div>
       </AdminLayout>

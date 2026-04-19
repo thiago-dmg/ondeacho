@@ -42,6 +42,22 @@ a:hover {
   text-decoration: underline;
 }
 
+/* Link de contato (tel/WhatsApp): mesma tipografia do corpo, destaque só no hover */
+a.inline-action-link {
+  color: inherit;
+  font: inherit;
+  font-weight: 600;
+  text-decoration: none;
+  border-bottom: 1px solid rgba(100, 116, 139, 0.35);
+  transition: color 0.15s ease, border-color 0.15s ease;
+}
+
+a.inline-action-link:hover {
+  color: var(--color-primary);
+  border-bottom-color: rgba(15, 118, 110, 0.45);
+  text-decoration: none;
+}
+
 h1,
 h2,
 h3 {

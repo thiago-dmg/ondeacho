@@ -1,9 +1,10 @@
-import { FormEvent, useCallback, useEffect, useState } from "react";
+import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
 import { AdminLayout } from "../src/components/AdminLayout";
 import { AdminPagination } from "../src/components/AdminPagination";
 import { AdminSearchField } from "../src/components/AdminSearchField";
 import { Modal } from "../src/components/Modal";
 import { apiRequest } from "../src/services/api";
+import { fetchViaCep } from "../src/services/viacep";
 
 type CatalogItem = { id: string; name: string; slug: string };
 
@@ -165,6 +166,46 @@ function ClinicFormFields({
   specialties: CatalogItem[];
   insurances: CatalogItem[];
 }) {
+  const cepTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const cepDigitsAtMount = useRef<string | null>(null);
+  if (cepDigitsAtMount.current === null) {
+    cepDigitsAtMount.current = form.zipcode.replace(/\D/g, "");
+  }
+
+  useEffect(() => {
+    if (cepTimer.current) {
+      clearTimeout(cepTimer.current);
+    }
+    const digits = form.zipcode.replace(/\D/g, "");
+    if (digits.length !== 8) {
+      return;
+    }
+    if (digits === cepDigitsAtMount.current) {
+      return;
+    }
+    cepTimer.current = setTimeout(() => {
+      void (async () => {
+        const r = await fetchViaCep(digits);
+        if (!r) {
+          return;
+        }
+        const city =
+          r.localidade && r.uf ? `${r.localidade}, ${r.uf}` : r.localidade || "";
+        setForm((p) => ({
+          ...p,
+          addressLine: r.logradouro ? r.logradouro : p.addressLine,
+          neighborhood: r.bairro ? r.bairro : p.neighborhood,
+          city: city || p.city
+        }));
+      })();
+    }, 450);
+    return () => {
+      if (cepTimer.current) {
+        clearTimeout(cepTimer.current);
+      }
+    };
+  }, [form.zipcode, setForm]);
+
   return (
     <div className="oa-form-grid oa-form-grid--2">
       <div className="oa-field">
@@ -210,8 +251,14 @@ function ClinicFormFields({
           id="clinic-zip"
           className="oa-input"
           value={form.zipcode}
+          inputMode="numeric"
+          placeholder="00000-000"
+          autoComplete="postal-code"
           onChange={(e) => setForm((p) => ({ ...p, zipcode: e.target.value }))}
         />
+        <span className="oa-muted" style={{ fontSize: 12, marginTop: 4, display: "block" }}>
+          Com 8 dígitos buscamos ViaCEP e preenchemos logradouro, bairro e cidade (UF junto à cidade, se houver).
+        </span>
       </div>
       <div className="oa-field">
         <label className="oa-label" htmlFor="clinic-addressLine">

@@ -48,7 +48,7 @@ export default function RedefinirSenhaPage() {
       return;
     }
     if (!token) {
-      setError("Abra o link completo enviado por e-mail, ou solicite um novo em «Esqueci a senha».");
+      setError('Abra o link completo enviado por e-mail, ou solicite um novo em "Esqueci a senha".');
       return;
     }
     setLoading(true);
@@ -70,7 +70,7 @@ export default function RedefinirSenhaPage() {
     return (
       <SiteLayout title="Nova senha">
         <div className="container" style={{ paddingTop: 40, paddingBottom: 48, maxWidth: 460 }}>
-          <p className="muted">A carregar…</p>
+          <p className="muted">Carregando…</p>
         </div>
       </SiteLayout>
     );
@@ -154,7 +154,7 @@ export default function RedefinirSenhaPage() {
                   </p>
                 ) : null}
                 <button type="submit" className="btn-primary" style={{ width: "100%" }} disabled={loading || !token}>
-                  {loading ? "A guardar…" : "Guardar nova senha"}
+                  {loading ? "Salvando…" : "Salvar nova senha"}
                 </button>
               </form>
               <p style={{ marginTop: 20 }}>

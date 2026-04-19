@@ -1,9 +1,10 @@
-import { FormEvent, useCallback, useEffect, useState } from "react";
+import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
 import { AdminLayout } from "../src/components/AdminLayout";
 import { AdminPagination } from "../src/components/AdminPagination";
 import { AdminSearchField } from "../src/components/AdminSearchField";
 import { Modal } from "../src/components/Modal";
 import { apiRequest } from "../src/services/api";
+import { fetchViaCep } from "../src/services/viacep";
 
 type CatalogItem = { id: string; name: string; slug: string };
 
@@ -138,6 +139,39 @@ function ProfFormFields({
   specialties: CatalogItem[];
   insurances: CatalogItem[];
 }) {
+  const [cepLookup, setCepLookup] = useState("");
+  const cepTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    if (cepTimer.current) {
+      clearTimeout(cepTimer.current);
+    }
+    const digits = cepLookup.replace(/\D/g, "");
+    if (digits.length !== 8) {
+      return;
+    }
+    cepTimer.current = setTimeout(() => {
+      void (async () => {
+        const r = await fetchViaCep(digits);
+        if (!r) {
+          return;
+        }
+        const city =
+          r.localidade && r.uf ? `${r.localidade}, ${r.uf}` : r.localidade || "";
+        setForm((p) => ({
+          ...p,
+          ...(city ? { city } : {}),
+          ...(r.bairro ? { neighborhood: r.bairro } : {})
+        }));
+      })();
+    }, 450);
+    return () => {
+      if (cepTimer.current) {
+        clearTimeout(cepTimer.current);
+      }
+    };
+  }, [cepLookup, setForm]);
+
   return (
     <div className="oa-form-grid oa-form-grid--2">
       <div className="oa-field">
@@ -164,6 +198,24 @@ function ProfFormFields({
           placeholder="Ex.: CRM-SP 123456"
           onChange={(e) => setForm((p) => ({ ...p, crm: e.target.value }))}
         />
+      </div>
+      <div className="oa-field" style={{ gridColumn: "1 / -1" }}>
+        <label className="oa-label" htmlFor="pf-cep-lookup">
+          CEP (opcional — ViaCEP)
+        </label>
+        <input
+          id="pf-cep-lookup"
+          className="oa-input"
+          value={cepLookup}
+          inputMode="numeric"
+          placeholder="Somente para buscar cidade e bairro"
+          maxLength={9}
+          autoComplete="off"
+          onChange={(e) => setCepLookup(e.target.value)}
+        />
+        <span className="oa-muted" style={{ fontSize: 12, marginTop: 4, display: "block" }}>
+          Com 8 dígitos preenchemos cidade (e UF) e bairro; não é salvo no cadastro do profissional.
+        </span>
       </div>
       <div className="oa-field">
         <label className="oa-label" htmlFor="pf-city">

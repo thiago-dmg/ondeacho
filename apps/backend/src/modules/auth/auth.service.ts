@@ -119,7 +119,7 @@ export class AuthService {
         const host = new URL(base).hostname;
         if (host === "api.ondeachotea.com" || /^api\./i.test(host)) {
           this.logger.warn(
-            `PASSWORD_RESET_PUBLIC_URL resolve para o host da API (${host}). O e-mail deve apontar para o domínio do site público (ex.: https://ondeachotea.com), onde existe a página /redefinir-senha — caso contrário o utilizador verá 404.`
+            `PASSWORD_RESET_PUBLIC_URL resolve para o host da API (${host}). O e-mail deve apontar para o domínio do site público (ex.: https://ondeachotea.com), onde existe a página /redefinir-senha — caso contrário o usuário verá 404.`
           );
         }
       } catch {
