@@ -107,3 +107,23 @@ Domínios de referência: `ondeachotea.com` (site público), `api.ondeachotea.co
 O admin usa **`NEXT_PUBLIC_API_URL`** (URL completa com `/api/v1`). O repositório inclui `apps/admin/.env.production` apontando para a API na VPS; em desenvolvimento local, crie `apps/admin/.env.local` com `http://localhost:3000/api/v1` (ou o IP da API). As chamadas HTTP ficam em `apps/admin/src/services/api.ts` (sem localhost fixo no código além do fallback de produção).
 
 Para subir o admin como serviço na VPS, o passo típico é `next build` com `output: 'standalone'`, empacotar a pasta gerada pelo build + estáticos e um unit systemd — pode ser um segundo workflow quando quiser. Em Linux/macOS o `distDir` é `apps/admin/.next-build`; no Windows o build usa `../../.admin-next-build` (raiz do monorepo) para evitar erros de permissão no arquivo `trace`.
+
+## GitHub Actions: `dial tcp …:22: i/o timeout` no passo «Upload package to VPS»
+
+Este erro aparece nos jobs **deploy-api**, **deploy-admin** e **deploy-web** quando o runner do GitHub **não consegue abrir TCP na porta 22** até ao `VPS_SSH_HOST`. Não indica bug no código do repositório; é **conectividade ou firewall**.
+
+### Checklist rápido
+
+1. **`VPS_SSH_HOST`** (secret) — IP ou hostname correctos? Teste no teu PC: `ssh -i chave.pem VPS_SSH_USER@VPS_SSH_HOST` (ou `Test-NetConnection HOST -Port 22` no PowerShell).
+2. **VPS ligada** — painel Hostinger / cloud a mostrar a máquina em execução.
+3. **Firewall da VPS / painel** — tem de existir regra **a aceitar SSH (TCP 22)** a partir da Internet (ou pelo menos a partir de redes que o GitHub Actions use). Os IPs dos runners **mudam**; uma whitelist só de «IPs conhecidos» costuma falhar ou exigir [lista oficial](https://api.github.com/meta) (`actions` em `hooks`) actualizada com frequência. Na prática, muitos projectos deixam **22 aberto ao mundo** e reforçam com **chave SSH + desactivar password + fail2ban**.
+4. **Porta SSH** — se mudaste a SSH da VPS para outra porta (ex. 2222), o workflow continua a usar **22**; ou alteras o `sshd` de volta para 22, ou terias de estender o workflow (o `appleboy/scp-action` / `ssh-action` suporta `port`).
+
+### Depois de corrigir rede/firewall
+
+Volta a **Actions** e executa o workflow manualmente (**Run workflow**) ou faz um push vazio para disparar de novo o deploy.
+
+### Alternativas se não quiseres expor SSH à Internet
+
+- **Runner self-hosted** na própria VPS (o job corre lá dentro e faz `scp`/`ssh` em `127.0.0.1`).
+- **Deploy por pull na VPS** (cron ou webhook) sem SSH a partir do GitHub.

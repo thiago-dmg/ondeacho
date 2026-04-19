@@ -2,6 +2,7 @@
 # Secrets: VPS_SSH_HOST, VPS_SSH_USER, VPS_SSH_KEY
 # Variável/secret opcional: NEXT_PUBLIC_API_URL (admin + site); fallback nos jobs deploy-admin / deploy-web.
 # Na VPS: systemd `ondeacho-web` na porta 3002 (Nginx → ondeachotea.com), ver docs/deploy-web-vps.md.
+# Falha «dial tcp …:22: i/o timeout» no upload SSH: ver docs/deploy-vps.md (secção GitHub Actions / firewall).
 
 name: CI and Deploy
 
