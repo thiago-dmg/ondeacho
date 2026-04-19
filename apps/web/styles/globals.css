@@ -165,3 +165,59 @@ select.text-input:focus {
     gap: 24px;
   }
 }
+
+/* Página clínica: mobile = contato → redes → profissionais → mapa; desktop = grid 2×2 */
+.clinica-detail-layout {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.clinica-detail-contato {
+  order: 1;
+}
+
+.clinica-detail-redes {
+  order: 2;
+}
+
+.clinica-detail-profissionais {
+  order: 3;
+}
+
+.clinica-detail-mapa {
+  order: 4;
+}
+
+@media (min-width: 768px) {
+  .clinica-detail-layout {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px 24px;
+    align-items: stretch;
+  }
+
+  .clinica-detail-contato {
+    grid-column: 1;
+    grid-row: 1;
+    order: unset;
+  }
+
+  .clinica-detail-profissionais {
+    grid-column: 2;
+    grid-row: 1;
+    order: unset;
+  }
+
+  .clinica-detail-redes {
+    grid-column: 1;
+    grid-row: 2;
+    order: unset;
+  }
+
+  .clinica-detail-mapa {
+    grid-column: 2;
+    grid-row: 2;
+    order: unset;
+  }
+}

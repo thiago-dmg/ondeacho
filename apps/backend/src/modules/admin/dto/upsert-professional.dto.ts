@@ -1,12 +1,18 @@
 import { ApiProperty } from "@nestjs/swagger";
 import { Type } from "class-transformer";
-import { IsArray, IsBoolean, IsNotEmpty, IsOptional, IsString, IsUUID, Max, Min } from "class-validator";
+import { IsArray, IsBoolean, IsNotEmpty, IsOptional, IsString, IsUUID, Max, MaxLength, Min } from "class-validator";
 
 export class UpsertProfessionalDto {
   @ApiProperty()
   @IsString()
   @IsNotEmpty()
   name!: string;
+
+  @ApiProperty({ required: false, description: "CRM ou registro profissional (opcional)" })
+  @IsOptional()
+  @IsString()
+  @MaxLength(64)
+  crm?: string;
 
   @ApiProperty({ required: false })
   @IsOptional()

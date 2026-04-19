@@ -106,8 +106,10 @@ export class AdminProfessionalsService {
       : [];
 
     const entity = this.professionalsRepository.create({
-      ...dto,
+      name: dto.name,
+      crm: dto.crm?.trim() || null,
       clinicId: dto.clinicId ?? null,
+      city: dto.city,
       neighborhood: dto.neighborhood ?? null,
       acceptsOnline: dto.acceptsOnline ?? false,
       supportsTeaTdh: dto.supportsTeaTdh ?? true,
@@ -124,11 +126,14 @@ export class AdminProfessionalsService {
       relations: { specialties: true, insurances: true }
     });
     if (!entity) throw new NotFoundException("Profissional não encontrado.");
-    Object.assign(entity, {
-      ...dto,
-      clinicId: dto.clinicId ?? entity.clinicId,
-      neighborhood: dto.neighborhood ?? entity.neighborhood
-    });
+    if (dto.name !== undefined) entity.name = dto.name;
+    if (dto.crm !== undefined) entity.crm = dto.crm.trim() || null;
+    if (dto.city !== undefined) entity.city = dto.city;
+    if (dto.clinicId !== undefined) entity.clinicId = dto.clinicId ?? null;
+    if (dto.neighborhood !== undefined) entity.neighborhood = dto.neighborhood ?? entity.neighborhood;
+    if (dto.acceptsOnline !== undefined) entity.acceptsOnline = dto.acceptsOnline;
+    if (dto.supportsTeaTdh !== undefined) entity.supportsTeaTdh = dto.supportsTeaTdh;
+    if (dto.rating !== undefined) entity.rating = dto.rating;
     if (dto.specialtyIds) {
       entity.specialties = await this.specialtiesRepository.findBy({ id: In(dto.specialtyIds) });
     }

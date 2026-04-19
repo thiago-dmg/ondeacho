@@ -7,6 +7,7 @@ import { StarRating } from "../../src/components/StarRating";
 import { apiRequest } from "../../src/lib/api";
 import { useAuth } from "../../src/lib/auth-context";
 import { parseClinic, parseReview } from "../../src/lib/mappers";
+import { getWebToken } from "../../src/lib/token";
 import type { ClinicListing, FavoriteRow, PublicReview, ReviewSummary } from "../../src/lib/types";
 
 function digitsOnly(value: string): string {
@@ -169,7 +170,7 @@ function FavoriteHeartButton({
         background: active ? "linear-gradient(135deg, #0d9488, #14b8a6)" : "#fff",
         color: active ? "#fff" : "#0f766e",
         cursor: disabled ? "not-allowed" : "pointer",
-        opacity: disabled ? 0.55 : 1,
+        opacity: 1,
         boxShadow: active ? "0 6px 20px rgba(13, 148, 136, 0.35)" : "none",
         transition: "transform 0.12s ease, box-shadow 0.15s ease"
       }}
@@ -184,7 +185,7 @@ function FavoriteHeartButton({
 export default function ClinicaDetailPage() {
   const router = useRouter();
   const id = typeof router.query.id === "string" ? router.query.id : "";
-  const { token } = useAuth();
+  const { token: sessionFromContext } = useAuth();
 
   const [clinic, setClinic] = useState<ClinicListing | null>(null);
   const [summary, setSummary] = useState<ReviewSummary | null>(null);
@@ -211,8 +212,9 @@ export default function ClinicaDetailPage() {
     setLoading(true);
     setError(null);
     try {
+      const authToken = getWebToken();
       const [raw, sum, revs] = await Promise.all([
-        apiRequest<Record<string, unknown>>(`/listings/${id}`, { skipAuth: !token }),
+        apiRequest<Record<string, unknown>>(`/listings/${id}`, { skipAuth: !authToken }),
         apiRequest<ReviewSummary>(`/reviews/listing/${id}/summary`, { skipAuth: true }),
         apiRequest<unknown[]>(`/reviews/listing/${id}`, { skipAuth: true })
       ]);
@@ -224,7 +226,7 @@ export default function ClinicaDetailPage() {
           .map(parseReview)
       );
 
-      if (token) {
+      if (authToken) {
         const favs = await apiRequest<FavoriteRow[]>("/favorites");
         const hit = favs.find((f) => f.clinicId === id);
         setFavoriteId(hit ? hit.id : null);
@@ -237,14 +239,14 @@ export default function ClinicaDetailPage() {
     } finally {
       setLoading(false);
     }
-  }, [id, token]);
+  }, [id]);
 
   useEffect(() => {
     void load();
-  }, [load]);
+  }, [load, sessionFromContext]);
 
   const toggleFavorite = async () => {
-    if (!token || !clinic) {
+    if (!getWebToken() || !clinic) {
       void router.push(`/login?from=${encodeURIComponent(router.asPath)}`);
       return;
     }
@@ -266,7 +268,7 @@ export default function ClinicaDetailPage() {
   };
 
   const sendContact = async (channel: "whatsapp" | "phone" | "email") => {
-    if (!token || !clinic) {
+    if (!getWebToken() || !clinic) {
       void router.push(`/login?from=${encodeURIComponent(router.asPath)}`);
       return;
     }
@@ -308,41 +310,25 @@ export default function ClinicaDetailPage() {
   const waDigits = digitsOnly(wa);
   const phoneDigits = digitsOnly(phone);
 
+  const hasSession = Boolean(getWebToken());
+  const isOwner = clinic.viewerIsOwner === true;
+  const siteHref = externalHref(clinic.websiteUrl);
+  const igHref = instagramHref(clinic.instagramUrl);
+  const fbHref = facebookHref(clinic.facebookUrl);
+  const hasSocial = Boolean(siteHref || igHref || fbHref);
+
   return (
     <SiteLayout title={clinic.name} description={clinic.description ?? undefined}>
-      <div className="container" style={{ paddingTop: 28, paddingBottom: 48 }}>
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 14, marginBottom: 20, alignItems: "center" }}>
+      <div className="container" style={{ paddingTop: 24, paddingBottom: 48 }}>
+        <div style={{ marginBottom: 18 }}>
           <Link href="/clinicas" className="muted" style={{ fontWeight: 600 }}>
             ← Voltar à lista
           </Link>
-          <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-            <FavoriteHeartButton
-              active={Boolean(favoriteId)}
-              disabled={!token}
-              title={
-                !token
-                  ? "Entre para usar favoritos"
-                  : favoriteId
-                    ? "Remover dos favoritos"
-                    : "Salvar nos favoritos"
-              }
-              onClick={() => void toggleFavorite()}
-            />
-            {!token ? (
-              <span className="muted" style={{ fontSize: 14, maxWidth: 280, lineHeight: 1.45 }}>
-                Entre para guardar esta clínica nos favoritos.
-              </span>
-            ) : clinic.viewerIsOwner ? (
-              <span className="muted" style={{ fontSize: 14, maxWidth: 320, lineHeight: 1.45 }}>
-                Este é o teu perfil público — o coração marca a clínica nos teus favoritos, como na app.
-              </span>
-            ) : null}
-          </div>
         </div>
 
-        <header style={{ marginBottom: 24 }}>
+        <header style={{ marginBottom: 22 }}>
           <div style={{ display: "flex", flexWrap: "wrap", gap: 12, alignItems: "center" }}>
-            <h1 style={{ fontSize: "clamp(1.4rem, 3vw, 2rem)", margin: 0 }}>{clinic.name}</h1>
+            <h1 style={{ fontSize: "clamp(1.35rem, 3vw, 1.95rem)", margin: 0, lineHeight: 1.2 }}>{clinic.name}</h1>
             {clinic.isVerified ? (
               <span className="badge badge-green">Verificada</span>
             ) : (
@@ -352,7 +338,7 @@ export default function ClinicaDetailPage() {
               <span className="badge badge-teal">Perfil reivindicado</span>
             ) : null}
           </div>
-          <p className="muted" style={{ marginTop: 10, fontSize: 16 }}>
+          <p className="muted" style={{ marginTop: 10, fontSize: 15, lineHeight: 1.5 }}>
             {buildAddress(clinic)}
           </p>
           {summary && summary.reviewCount > 0 && summary.averageRating != null ? (
@@ -363,72 +349,53 @@ export default function ClinicaDetailPage() {
               </span>
             </div>
           ) : (
-            <p className="muted" style={{ marginTop: 12 }}>
+            <p className="muted" style={{ marginTop: 12, marginBottom: 0 }}>
               Ainda não há avaliações aprovadas nesta clínica.
             </p>
           )}
         </header>
 
-        {clinic && embedSrc ? (
-          <section
-            className="card"
-            style={{
-              marginBottom: 28,
-              padding: 0,
-              overflow: "hidden",
-              border: "1px solid var(--color-divider)",
-              boxShadow: "0 8px 28px rgba(15, 118, 110, 0.08)"
-            }}
-          >
-            <div style={{ padding: "18px 22px 0" }}>
-              <h2 style={{ fontSize: 18, margin: 0 }}>Mapa</h2>
-              <p className="muted" style={{ fontSize: 14, margin: "8px 0 0", lineHeight: 1.45 }}>
-                Localização aproximada com base no endereço cadastrado.
-              </p>
-            </div>
+        <div className="clinica-detail-layout">
+          <section className="card clinica-detail-contato" style={{ padding: 22, display: "flex", flexDirection: "column", gap: 0 }}>
+            <h2 style={{ margin: "0 0 14px", fontSize: 18 }}>Contato e ações</h2>
+
             <div
               style={{
-                marginTop: 12,
-                width: "100%",
-                maxWidth: 560,
-                marginLeft: "auto",
-                marginRight: "auto",
-                aspectRatio: "2 / 1",
-                minHeight: 140,
-                maxHeight: 200,
-                background: "var(--color-surface-muted, #e8f4f2)",
-                borderRadius: "0 0 12px 12px"
+                display: "flex",
+                flexWrap: "wrap",
+                alignItems: "center",
+                gap: 14,
+                marginBottom: 18,
+                paddingBottom: 18,
+                borderBottom: "1px solid var(--color-divider)"
               }}
             >
-              <iframe
-                title={`Mapa — ${clinic.name}`}
-                src={embedSrc}
-                loading="lazy"
-                style={{ border: 0, width: "100%", height: "100%", display: "block" }}
-                referrerPolicy="no-referrer-when-downgrade"
+              <FavoriteHeartButton
+                active={Boolean(favoriteId)}
+                disabled={false}
+                title={
+                  !hasSession
+                    ? "Entrar para usar favoritos"
+                    : favoriteId
+                      ? "Remover dos favoritos"
+                      : "Salvar nos favoritos"
+                }
+                onClick={() => void toggleFavorite()}
               />
-            </div>
-            {mapsUrl ? (
-              <div style={{ padding: "12px 22px 18px" }}>
-                <a
-                  href={mapsUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="btn-ghost"
-                  style={{ display: "inline-block", textDecoration: "none", fontWeight: 600 }}
-                >
-                  Abrir no Google Maps (nova aba)
-                </a>
+              <div style={{ flex: "1 1 200px", minWidth: 0 }}>
+                <p style={{ margin: 0, fontWeight: 700, fontSize: 15, color: "#134e4a" }}>Favoritos</p>
+                <p className="muted" style={{ margin: "6px 0 0", fontSize: 14, lineHeight: 1.45 }}>
+                  {!hasSession
+                    ? "Entre para guardar esta clínica e aceder mais rápido depois."
+                    : isOwner
+                      ? "Como dono do perfil, usa o coração para marcar a tua clínica nos favoritos (igual à app)."
+                      : "Marca a clínica nos favoritos para encontrares mais tarde."}
+                </p>
               </div>
-            ) : null}
-          </section>
-        ) : null}
+            </div>
 
-        <div className="grid-2" style={{ gap: 24 }}>
-          <section className="card" style={{ padding: 22 }}>
-            <h2 style={{ margin: "0 0 12px", fontSize: 18 }}>Contato</h2>
             {phone ? (
-              <p style={{ margin: "6px 0" }}>
+              <p style={{ margin: "4px 0" }}>
                 Telefone:{" "}
                 <a href={`tel:${phoneDigits}`} style={{ fontWeight: 600 }}>
                   {phone}
@@ -436,7 +403,7 @@ export default function ClinicaDetailPage() {
               </p>
             ) : null}
             {wa ? (
-              <p style={{ margin: "6px 0" }}>
+              <p style={{ margin: "4px 0" }}>
                 WhatsApp:{" "}
                 <a href={`https://wa.me/${waDigits}`} target="_blank" rel="noopener noreferrer">
                   {wa}
@@ -445,65 +412,24 @@ export default function ClinicaDetailPage() {
             ) : null}
             {!phone && !wa ? <p className="muted">Contato não informado.</p> : null}
 
-            {(() => {
-              const site = externalHref(clinic.websiteUrl);
-              const ig = instagramHref(clinic.instagramUrl);
-              const fb = facebookHref(clinic.facebookUrl);
-              if (!site && !ig && !fb) {
-                return null;
-              }
-              return (
-                <div style={{ marginTop: 20, paddingTop: 18, borderTop: "1px solid var(--color-divider)" }}>
-                  <h3 style={{ fontSize: 15, margin: "0 0 12px", fontWeight: 700 }}>Site e redes</h3>
-                  <div style={{ display: "flex", flexWrap: "wrap", gap: 10, alignItems: "center" }}>
-                    {site ? (
-                      <SocialIconLink href={site} label="Abrir site no navegador">
-                        <IconGlobe />
-                      </SocialIconLink>
-                    ) : null}
-                    {ig ? (
-                      <SocialIconLink href={ig} label="Abrir Instagram">
-                        <IconInstagram />
-                      </SocialIconLink>
-                    ) : null}
-                    {fb ? (
-                      <SocialIconLink href={fb} label="Abrir Facebook">
-                        <IconFacebook />
-                      </SocialIconLink>
-                    ) : null}
-                  </div>
-                </div>
-              );
-            })()}
-
-            {token && clinic.viewerIsOwner ? (
+            {hasSession && isOwner ? (
               <div
                 style={{
                   marginTop: 18,
-                  padding: "18px 16px",
+                  padding: "16px 14px",
                   borderRadius: 12,
                   background: "rgba(13, 148, 136, 0.07)",
                   border: "1px solid rgba(13, 148, 136, 0.22)"
                 }}
               >
-                <p style={{ margin: 0, fontSize: 15, lineHeight: 1.55, color: "#134e4a" }}>
-                  <strong>Olá!</strong> Este é o perfil público da tua clínica. Os contactos e redes aparecem para
-                  quem visita o OndeAcho; para editar dados usa o painel ou a app. Aqui o mais útil é marcares a tua
-                  própria clínica nos favoritos (coração em cima ou abaixo), como na app.
+                <p style={{ margin: 0, fontSize: 14, lineHeight: 1.55, color: "#134e4a" }}>
+                  <strong>Área do proprietário.</strong> Quem visita vê os contactos e redes abaixo; para alterar
+                  dados usa o painel de administração ou a app. Os botões «registrar interesse» não aparecem aqui para
+                  evitares confusão com o teu próprio perfil.
                 </p>
-                <div style={{ display: "flex", alignItems: "center", gap: 14, marginTop: 16, flexWrap: "wrap" }}>
-                  <FavoriteHeartButton
-                    active={Boolean(favoriteId)}
-                    title={favoriteId ? "Remover dos favoritos" : "Adicionar a favoritos"}
-                    onClick={() => void toggleFavorite()}
-                  />
-                  <span className="muted" style={{ fontSize: 14, lineHeight: 1.45, maxWidth: 240 }}>
-                    {favoriteId ? "Já está nos teus favoritos." : "Toca no coração para adicionar aos favoritos."}
-                  </span>
-                </div>
               </div>
-            ) : token ? (
-              <div style={{ display: "flex", flexWrap: "wrap", gap: 10, marginTop: 16 }}>
+            ) : hasSession && !isOwner ? (
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 10, marginTop: 18 }}>
                 {wa ? (
                   <button type="button" className="btn-primary" onClick={() => void sendContact("whatsapp")}>
                     Registrar interesse (WhatsApp)
@@ -516,40 +442,145 @@ export default function ClinicaDetailPage() {
                 ) : null}
               </div>
             ) : (
-              <p className="muted" style={{ marginTop: 10 }}>
+              <p className="muted" style={{ marginTop: 14, marginBottom: 0 }}>
                 <Link href={`/login?from=${encodeURIComponent(router.asPath)}`}>Entre</Link> para registrar interesse
                 na clínica.
               </p>
             )}
             {contactMsg ? (
-              <p style={{ marginTop: 12, color: "var(--color-primary)", fontWeight: 600 }}>{contactMsg}</p>
+              <p style={{ marginTop: 14, marginBottom: 0, color: "var(--color-primary)", fontWeight: 600 }}>{contactMsg}</p>
             ) : null}
           </section>
 
-          <section className="card" style={{ padding: 22 }}>
-            <h2 style={{ margin: "0 0 12px", fontSize: 18 }}>Profissionais</h2>
-            {clinic.professionals.length === 0 ? (
-              <p className="muted">Nenhum profissional listado.</p>
+          <section
+            className="card clinica-detail-profissionais"
+            style={{
+              padding: 22,
+              display: "flex",
+              flexDirection: "column",
+              minHeight: 0
+            }}
+          >
+            <h2 style={{ margin: "0 0 14px", fontSize: 18 }}>Profissionais</h2>
+            <div style={{ flex: 1, minHeight: 100 }}>
+              {clinic.professionals.length === 0 ? (
+                <p className="muted" style={{ margin: 0 }}>
+                  Nenhum profissional listado.
+                </p>
+              ) : (
+                <ul style={{ margin: 0, padding: 0, listStyle: "none" }}>
+                  {clinic.professionals.map((p, idx) => (
+                    <li
+                      key={p.id}
+                      style={{
+                        marginBottom: idx < clinic.professionals.length - 1 ? 14 : 0,
+                        paddingBottom: idx < clinic.professionals.length - 1 ? 14 : 0,
+                        borderBottom:
+                          idx < clinic.professionals.length - 1 ? "1px solid var(--color-divider)" : undefined
+                      }}
+                    >
+                      <div style={{ fontWeight: 700, fontSize: 16, color: "#134e4a" }}>{p.name}</div>
+                      {p.crm ? (
+                        <div className="muted" style={{ fontSize: 13, marginTop: 4, letterSpacing: "0.02em" }}>
+                          CRM {p.crm}
+                        </div>
+                      ) : null}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          </section>
+
+          <section className="card clinica-detail-redes" style={{ padding: 22 }}>
+            <h2 style={{ margin: "0 0 12px", fontSize: 18 }}>Site e redes</h2>
+            {!hasSocial ? (
+              <p className="muted" style={{ margin: 0 }}>
+                Nenhum site ou rede social cadastrado.
+              </p>
             ) : (
-              <ul style={{ margin: 0, paddingLeft: 18 }}>
-                {clinic.professionals.map((p) => (
-                  <li key={p.id} style={{ marginBottom: 6 }}>
-                    {p.name}
-                  </li>
-                ))}
-              </ul>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 10, alignItems: "center" }}>
+                {siteHref ? (
+                  <SocialIconLink href={siteHref} label="Abrir site no navegador">
+                    <IconGlobe />
+                  </SocialIconLink>
+                ) : null}
+                {igHref ? (
+                  <SocialIconLink href={igHref} label="Abrir Instagram">
+                    <IconInstagram />
+                  </SocialIconLink>
+                ) : null}
+                {fbHref ? (
+                  <SocialIconLink href={fbHref} label="Abrir Facebook">
+                    <IconFacebook />
+                  </SocialIconLink>
+                ) : null}
+              </div>
             )}
           </section>
+
+          {clinic && embedSrc ? (
+            <section
+              className="card clinica-detail-mapa"
+              style={{
+                padding: 0,
+                overflow: "hidden",
+                border: "1px solid var(--color-divider)",
+                boxShadow: "0 6px 20px rgba(15, 118, 110, 0.06)"
+              }}
+            >
+              <div style={{ padding: "16px 18px 0" }}>
+                <h2 style={{ fontSize: 17, margin: 0 }}>Mapa</h2>
+                <p className="muted" style={{ fontSize: 13, margin: "6px 0 0", lineHeight: 1.45 }}>
+                  Localização aproximada a partir do endereço cadastrado.
+                </p>
+              </div>
+              <div
+                style={{
+                  marginTop: 10,
+                  width: "100%",
+                  maxWidth: 480,
+                  marginLeft: "auto",
+                  marginRight: "auto",
+                  aspectRatio: "2.2 / 1",
+                  minHeight: 120,
+                  maxHeight: 160,
+                  background: "var(--color-surface-muted, #e8f4f2)"
+                }}
+              >
+                <iframe
+                  title={`Mapa — ${clinic.name}`}
+                  src={embedSrc}
+                  loading="lazy"
+                  style={{ border: 0, width: "100%", height: "100%", display: "block" }}
+                  referrerPolicy="no-referrer-when-downgrade"
+                />
+              </div>
+              {mapsUrl ? (
+                <div style={{ padding: "10px 18px 14px" }}>
+                  <a
+                    href={mapsUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="btn-ghost"
+                    style={{ display: "inline-block", textDecoration: "none", fontWeight: 600, fontSize: 14 }}
+                  >
+                    Abrir no Google Maps
+                  </a>
+                </div>
+              ) : null}
+            </section>
+          ) : null}
         </div>
 
         {clinic.description ? (
-          <section style={{ marginTop: 24 }}>
-            <h2 style={{ fontSize: 18 }}>Sobre</h2>
-            <p style={{ whiteSpace: "pre-wrap", maxWidth: 800 }}>{clinic.description}</p>
+          <section style={{ marginTop: 22 }}>
+            <h2 style={{ fontSize: 18, marginBottom: 10 }}>Sobre</h2>
+            <p style={{ whiteSpace: "pre-wrap", maxWidth: 800, margin: 0, lineHeight: 1.6 }}>{clinic.description}</p>
           </section>
         ) : null}
 
-        <section style={{ marginTop: 32 }}>
+        <section style={{ marginTop: 28 }}>
           <h2 style={{ fontSize: 18 }}>Avaliações da comunidade</h2>
           {reviews.length === 0 ? (
             <p className="muted">Nenhuma avaliação aprovada ainda.</p>

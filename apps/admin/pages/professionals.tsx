@@ -12,6 +12,7 @@ type ClinicOption = { id: string; name: string; city: string };
 type Professional = {
   id: string;
   name: string;
+  crm?: string | null;
   city: string;
   rating: number;
   neighborhood?: string | null;
@@ -25,6 +26,7 @@ type Professional = {
 
 type ProfForm = {
   name: string;
+  crm: string;
   city: string;
   neighborhood: string;
   clinicId: string;
@@ -38,6 +40,7 @@ type ProfForm = {
 function emptyForm(): ProfForm {
   return {
     name: "",
+    crm: "",
     city: "",
     neighborhood: "",
     clinicId: "",
@@ -52,6 +55,7 @@ function emptyForm(): ProfForm {
 function profToForm(p: Professional): ProfForm {
   return {
     name: p.name,
+    crm: p.crm ?? "",
     city: p.city,
     neighborhood: p.neighborhood ?? "",
     clinicId: p.clinicId ?? "",
@@ -75,6 +79,7 @@ function formToPayload(f: ProfForm) {
   const rating = Math.min(5, Math.max(0, Number.parseFloat(f.rating) || 0));
   return {
     name: f.name.trim(),
+    crm: f.crm.trim() || undefined,
     city: f.city.trim(),
     neighborhood: f.neighborhood.trim() || undefined,
     clinicId: f.clinicId.trim() || undefined,
@@ -145,6 +150,19 @@ function ProfFormFields({
           value={form.name}
           onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))}
           required
+        />
+      </div>
+      <div className="oa-field" style={{ gridColumn: "1 / -1" }}>
+        <label className="oa-label" htmlFor="pf-crm">
+          CRM (opcional)
+        </label>
+        <input
+          id="pf-crm"
+          className="oa-input"
+          value={form.crm}
+          maxLength={64}
+          placeholder="Ex.: CRM-SP 123456"
+          onChange={(e) => setForm((p) => ({ ...p, crm: e.target.value }))}
         />
       </div>
       <div className="oa-field">
@@ -439,6 +457,11 @@ export default function ProfessionalsPage() {
               <tr key={p.id}>
                 <td>
                   <strong>{p.name}</strong>
+                  {p.crm ? (
+                    <div className="oa-muted" style={{ marginTop: 2, fontSize: 12 }}>
+                      CRM {p.crm}
+                    </div>
+                  ) : null}
                   <div className="oa-muted" style={{ marginTop: 4 }}>
                     {p.specialties?.length ? `${p.specialties.length} esp.` : "Sem esp."}
                     {p.insurances?.length ? ` · ${p.insurances.length} conv.` : ""}

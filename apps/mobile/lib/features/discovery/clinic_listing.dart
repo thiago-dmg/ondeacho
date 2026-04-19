@@ -91,13 +91,16 @@ class ClinicListing {
 class ClinicProfessionalSummary {
   final String id;
   final String name;
+  final String? crm;
 
-  const ClinicProfessionalSummary({required this.id, required this.name});
+  const ClinicProfessionalSummary({required this.id, required this.name, this.crm});
 
   factory ClinicProfessionalSummary.fromJson(Map<String, dynamic> json) {
+    final crmRaw = json["crm"]?.toString().trim();
     return ClinicProfessionalSummary(
       id: json["id"]?.toString() ?? "",
-      name: json["name"]?.toString() ?? ""
+      name: json["name"]?.toString() ?? "",
+      crm: (crmRaw != null && crmRaw.isNotEmpty) ? crmRaw : null
     );
   }
 }

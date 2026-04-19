@@ -21,6 +21,10 @@ export class ProfessionalEntity {
   @Column({ length: 160 })
   name!: string;
 
+  /** CRM ou registro profissional (ex.: CRM-SP 123456), opcional. */
+  @Column({ type: "varchar", length: 64, nullable: true })
+  crm!: string | null;
+
   @Column({ name: "clinic_id", type: "uuid", nullable: true })
   clinicId!: string | null;
 

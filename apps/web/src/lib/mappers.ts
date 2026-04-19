@@ -1,9 +1,23 @@
 import type { ClinicListing, ClinicProfessionalSummary, PublicReview } from "./types";
 
+function parseTruthyFlag(raw: Record<string, unknown>, camelKey: string, snakeKey: string): boolean {
+  const v = raw[camelKey] ?? raw[snakeKey];
+  if (v === true || v === 1) {
+    return true;
+  }
+  if (typeof v === "string") {
+    const s = v.trim().toLowerCase();
+    return s === "true" || s === "1" || s === "yes";
+  }
+  return false;
+}
+
 export function parseClinicProfessionalSummary(raw: Record<string, unknown>): ClinicProfessionalSummary {
+  const crmRaw = raw.crm != null ? String(raw.crm).trim() : "";
   return {
     id: String(raw.id ?? ""),
-    name: String(raw.name ?? "")
+    name: String(raw.name ?? ""),
+    crm: crmRaw.length > 0 ? crmRaw : null
   };
 }
 
@@ -31,7 +45,7 @@ export function parseClinic(raw: Record<string, unknown>): ClinicListing {
     addedByCommunity: raw.addedByCommunity === true,
     isClaimed: raw.isClaimed === true,
     isVerified: raw.isVerified === true,
-    viewerIsOwner: raw.viewerIsOwner === true,
+    viewerIsOwner: parseTruthyFlag(raw, "viewerIsOwner", "viewer_is_owner"),
     rating: Number(raw.rating ?? 0) || 0,
     displayRating:
       raw.displayRating != null && raw.displayRating !== ""

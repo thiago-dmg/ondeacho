@@ -1,6 +1,6 @@
 # Deploy do site público na VPS (`ondeachotea.com`)
 
-**Deploy recomendado:** merge em `main` dispara o job **`deploy-production`** em [`.github/workflows/ci-deploy.yml`](../.github/workflows/ci-deploy.yml), que builda API + site, aplica **migrações**, publica e reinicia `ondeacho-api` e `ondeacho-web`. Guia completo: [deploy-acoes-github-producao.md](./deploy-acoes-github-producao.md).
+**Deploy recomendado:** merge em `main` dispara o job `**deploy-production`** em `[.github/workflows/ci-deploy.yml](../.github/workflows/ci-deploy.yml)`, que builda API + site, aplica **migrações**, publica e reinicia `ondeacho-api` e `ondeacho-web`. Guia completo: [deploy-acoes-github-producao.md](./deploy-acoes-github-producao.md).
 
 O resto desta página descreve o equivalente **manual** (Next em **localhost:3002**, Nginx na **443**), útil para diagnóstico ou se ainda não usares Actions.
 
@@ -8,7 +8,7 @@ O resto desta página descreve o equivalente **manual** (Next em **localhost:300
 
 O repositório pode estar certo e **produção ainda a servir um build antigo** do `apps/web`, ou o browser/proxy a **cachear HTML**. Confirma na VPS: `sudo systemctl status ondeacho-web`, `curl -sI https://ondeachotea.com/login` (ou `http://127.0.0.1:3002/login`), faz **novo** `npm run build --workspace apps/web` + **restart** do serviço (ou deixa o job `deploy-web` da Actions concluir). Depois de publicar, o projecto inclui `middleware` com `Cache-Control: no-store` nas rotas principais para reduzir HTML antigo em cache.
 
-Para **redes sociais** após gravar no admin: na base tem de existir a migração **`010_clinic_website_social.sql`**; a API tem de estar actualizada; o pedido `GET /listings/:id` não pode estar em cache antigo (o backend envia `Cache-Control: no-store` nas listagens).
+Para **redes sociais** após gravar no admin: na base tem de existir a migração `**010_clinic_website_social.sql`**; a API tem de estar actualizada; o pedido `GET /listings/:id` não pode estar em cache antigo (o backend envia `Cache-Control: no-store` nas listagens).
 
 ### Link «Redefinir senha» no e-mail: `ERR_TOO_MANY_REDIRECTS`
 
@@ -38,9 +38,9 @@ export NODE_ENV=production
 npm run build --workspace apps/web
 ```
 
-Para compilar o **backend** ou correr **`npm run db:migrate`** no mesmo clone, também precisas de `devDependencies` instaladas (ou `npm ci --include=dev` como acima).
+Para compilar o **backend** ou correr `**npm run db:migrate`** no mesmo clone, também precisas de `devDependencies` instaladas (ou `npm ci --include=dev` como acima).
 
-O **`apps/web/.env.production`** define `NEXT_PUBLIC_API_URL=/api/v1` (mesma origem + rewrites no `next.config.js`).
+O `**apps/web/.env.production**` define `NEXT_PUBLIC_API_URL=/api/v1` (mesma origem + rewrites no `next.config.js`).
 
 Para build com API em subdomínio (opcional):  
 `export NEXT_PUBLIC_API_URL=https://api.ondeachotea.com/api/v1` antes do `npm run build`.
@@ -116,7 +116,7 @@ Não abras a **3002** à internet se usares Nginx: só **80/443** públicos; a 3
 
 ## GitHub Actions
 
-O workflow `[.github/workflows/ci-deploy.yml](../.github/workflows/ci-deploy.yml)` inclui o job **`deploy-web`**: em push para `main`/`master` com alterações em `apps/web/**` (ou no próprio workflow), faz build, envia para `/var/www/ondeacho-web` e reinicia o serviço **`ondeacho-web`** na porta **3002**. Em **Run workflow** (manual), o site também é publicado (útil para primeira instalação ou rebuild sem mudar ficheiros sob o filtro de paths).
+O workflow `[.github/workflows/ci-deploy.yml](../.github/workflows/ci-deploy.yml)` inclui o job `**deploy-web`**: em push para `main`/`master` com alterações em `apps/web/**` (ou no próprio workflow), faz build, envia para `/var/www/ondeacho-web` e reinicia o serviço `**ondeacho-web**` na porta **3002**. Em **Run workflow** (manual), o site também é publicado (útil para primeira instalação ou rebuild sem mudar ficheiros sob o filtro de paths).
 
 **Requisito na VPS:** o serviço `ondeacho-web` e Nginx a `proxy_pass` para `127.0.0.1:3002` têm de existir (primeira vez: secção “Primeira vez na VPS” acima). Sem isso, o job falha no `curl` local após o restart.
 
@@ -143,10 +143,10 @@ Significa: **o Nginx está a correr**, mas **não há resposta válida** do Next
 
 ## “Failed to fetch” na página (catálogos, login, etc.)
 
-Com **`NEXT_PUBLIC_API_URL=/api/v1`**, o pedido vai para **o mesmo host** do site e o Next encaminha para **`127.0.0.1:3000`**. Se ainda falhar:
+Com `**NEXT_PUBLIC_API_URL=/api/v1`**, o pedido vai para **o mesmo host** do site e o Next encaminha para `**127.0.0.1:3000`**. Se ainda falhar:
 
 1. Na VPS: `curl -sS http://127.0.0.1:3000/api/v1/health` — tem de responder. Se **Connection refused**, o serviço **Nest** (`ondeacho-api`) **não está a correr** ou está noutra porta.
-2. Confirma que fizeste **`git pull`** e **novo `npm run build --workspace apps/web`** depois da alteração para `/api/v1` (build antigo ainda pode apontar para `https://api...`).
+2. Confirma que fizeste `**git pull`** e **novo `npm run build --workspace apps/web`** depois da alteração para `/api/v1` (build antigo ainda pode apontar para `https://api...`).
 
 ## “Não seguro” no Chrome
 

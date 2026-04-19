@@ -1,6 +1,6 @@
 export type CatalogOption = { id: string; name: string };
 
-export type ClinicProfessionalSummary = { id: string; name: string };
+export type ClinicProfessionalSummary = { id: string; name: string; crm?: string | null };
 
 export type ClinicListing = {
   id: string;
