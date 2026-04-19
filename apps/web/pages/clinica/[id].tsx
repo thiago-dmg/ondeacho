@@ -410,15 +410,33 @@ export default function ClinicaDetailPage() {
             {buildAddress(clinic)}
           </p>
           {summary && summary.reviewCount > 0 && summary.averageRating != null ? (
-            <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 12 }}>
+            <a
+              href="#avaliacoes-comunidade"
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 10,
+                marginTop: 12,
+                textDecoration: "none",
+                color: "inherit",
+                cursor: "pointer",
+                borderRadius: 8,
+                padding: "4px 6px",
+                marginLeft: -6
+              }}
+            >
               <StarRating value={summary.averageRating} />
               <span style={{ fontWeight: 600 }}>
-                {summary.averageRating.toFixed(1)} · {summary.reviewCount} avaliações
+                {summary.averageRating.toFixed(1)} ·{" "}
+                {summary.reviewCount === 1 ? "1 avaliação" : `${summary.reviewCount} avaliações`}
               </span>
-            </div>
+            </a>
           ) : (
             <p className="muted" style={{ marginTop: 12, marginBottom: 0, fontSize: 15 }}>
-              Ainda não há avaliações aprovadas nesta clínica.
+              Ainda não há avaliações aprovadas nesta clínica.{" "}
+              <a href="#avaliacoes-comunidade" style={{ color: "var(--color-primary)", fontWeight: 600 }}>
+                Ir às avaliações
+              </a>
             </p>
           )}
           </header>
@@ -553,7 +571,11 @@ export default function ClinicaDetailPage() {
             </div>
           </section>
 
-          <section className="clinica-detail-profissionais" aria-labelledby="clinica-profissionais-heading">
+          <section
+            className="card clinica-detail-profissionais"
+            aria-labelledby="clinica-profissionais-heading"
+            style={{ padding: 22 }}
+          >
             <h2 id="clinica-profissionais-heading" style={{ fontSize: 22, letterSpacing: "-0.02em" }}>
               Profissionais
             </h2>
@@ -646,7 +668,7 @@ export default function ClinicaDetailPage() {
           </section>
         ) : null}
 
-        <section className="card" style={{ marginTop: 28, padding: 22 }}>
+        <section id="avaliacoes-comunidade" className="card" style={{ marginTop: 28, padding: 22 }}>
           <h2 style={{ fontSize: 22, margin: "0 0 8px", letterSpacing: "-0.02em" }}>Avaliações da comunidade</h2>
           <p className="muted" style={{ margin: "0 0 18px", fontSize: 14, lineHeight: 1.5 }}>
             Notas e comentários aprovados pela moderação. Envie a sua experiência — publicamos após análise.

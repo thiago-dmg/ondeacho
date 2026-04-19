@@ -98,6 +98,27 @@ class ClinicListing {
   }
 }
 
+String? _formatCrmForDisplay(String? raw) {
+  final t = raw?.trim() ?? "";
+  if (t.isEmpty) {
+    return null;
+  }
+  final upper = t.toUpperCase();
+  if (upper.startsWith("CRM") ||
+      upper.startsWith("CRO") ||
+      upper.startsWith("CRP") ||
+      upper.startsWith("CRN") ||
+      upper.startsWith("COREN") ||
+      upper.startsWith("CFM") ||
+      upper.startsWith("CON") ||
+      upper.startsWith("RQE") ||
+      upper.startsWith("CRFA") ||
+      upper.startsWith("CREFITO")) {
+    return t;
+  }
+  return "CRM $t";
+}
+
 class ClinicProfessionalSummary {
   final String id;
   final String name;
@@ -110,7 +131,7 @@ class ClinicProfessionalSummary {
     return ClinicProfessionalSummary(
       id: json["id"]?.toString() ?? "",
       name: json["name"]?.toString() ?? "",
-      crm: (crmRaw != null && crmRaw.isNotEmpty) ? crmRaw : null
+      crm: _formatCrmForDisplay(crmRaw != null && crmRaw.isNotEmpty ? crmRaw : null)
     );
   }
 }

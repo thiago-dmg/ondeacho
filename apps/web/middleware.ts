@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 
 /**
  * Evita que proxies/CDN sirvam HTML antigo (ex.: login sem o link "Esqueci minha senha") após novo deploy.
+ * Inclui `/redefinir-senha` para o mesmo Cache-Control em todas as rotas públicas (link do e-mail com ?token=).
  */
 export function middleware(request: NextRequest) {
   const res = NextResponse.next();
@@ -11,12 +12,11 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-  // Nota: /redefinir-senha fica fora do middleware — Cache-Control vai em next.config.js
-  // (evita interacções edge raras com query string e redireccionamentos).
   matcher: [
     "/",
     "/login",
     "/esqueci-senha",
+    "/redefinir-senha",
     "/conta",
     "/clinicas",
     "/favoritos",

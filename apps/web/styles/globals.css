@@ -215,16 +215,16 @@ select.text-input:focus {
 
 .clinica-detail-profissionais {
   order: 2;
-  padding: 2px 0 0;
-  background: transparent;
-  border: none;
-  box-shadow: none;
 }
 
 .clinica-detail-profissionais h2 {
   margin: 0 0 10px;
   font-size: 22px;
   letter-spacing: -0.02em;
+}
+
+#avaliacoes-comunidade {
+  scroll-margin-top: 88px;
 }
 
 .clinica-pro-list {
@@ -269,7 +269,6 @@ select.text-input:focus {
     grid-column: 2;
     grid-row: 1;
     order: unset;
-    padding: 6px 0 0 4px;
   }
 
   .clinica-detail-mapa {

@@ -12,12 +12,24 @@ function parseTruthyFlag(raw: Record<string, unknown>, camelKey: string, snakeKe
   return false;
 }
 
+/** Exibe registro profissional com prefixo legível quando o cadastro só tem número. */
+export function formatCrmForDisplay(crm: string | null | undefined): string | null {
+  const t = (crm ?? "").trim();
+  if (!t) {
+    return null;
+  }
+  if (/^(CRM|CRO|CRP|CRN|COREN|CFM|CON|RQE|CRFa|CREFITO)\b/i.test(t)) {
+    return t;
+  }
+  return `CRM ${t}`;
+}
+
 export function parseClinicProfessionalSummary(raw: Record<string, unknown>): ClinicProfessionalSummary {
   const crmRaw = raw.crm != null ? String(raw.crm).trim() : "";
   return {
     id: String(raw.id ?? ""),
     name: String(raw.name ?? ""),
-    crm: crmRaw.length > 0 ? crmRaw : null
+    crm: formatCrmForDisplay(crmRaw.length > 0 ? crmRaw : null)
   };
 }
 
