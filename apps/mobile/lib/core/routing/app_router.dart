@@ -104,11 +104,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: "/owner/clinic/:clinicId/edit",
         builder: (context, state) => EditOwnedClinicPage(
-          clinicId: state.pathParameters["clinicId"] ?? "",
-          clinicName: state.uri.queryParameters["name"] ?? "",
-          addressLine: state.uri.queryParameters["addressLine"],
-          phone: state.uri.queryParameters["phone"],
-          whatsappPhone: state.uri.queryParameters["whatsappPhone"]
+          clinicId: state.pathParameters["clinicId"] ?? ""
         )
       )
     ]

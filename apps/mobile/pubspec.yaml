@@ -39,6 +39,7 @@ dependencies:
   dio: ^5.9.2
   shared_preferences: ^2.5.5
   url_launcher: ^6.3.2
+  webview_flutter: ^4.10.0
   google_fonts: ^8.0.2
   lucide_icons: ^0.257.0
 

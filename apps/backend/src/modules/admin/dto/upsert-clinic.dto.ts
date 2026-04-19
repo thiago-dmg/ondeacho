@@ -1,6 +1,6 @@
 import { ApiProperty } from "@nestjs/swagger";
 import { Type } from "class-transformer";
-import { IsArray, IsBoolean, IsNotEmpty, IsOptional, IsString, IsUUID } from "class-validator";
+import { IsArray, IsBoolean, IsNotEmpty, IsOptional, IsString, IsUUID, MaxLength } from "class-validator";
 
 export class UpsertClinicDto {
   @ApiProperty()
@@ -42,6 +42,24 @@ export class UpsertClinicDto {
   @IsOptional()
   @IsString()
   whatsappPhone?: string;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  websiteUrl?: string;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  instagramUrl?: string;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  facebookUrl?: string;
 
   @ApiProperty({ required: false })
   @IsOptional()

@@ -3,6 +3,7 @@ import "package:flutter_riverpod/flutter_riverpod.dart";
 import "package:go_router/go_router.dart";
 import "package:lucide_icons/lucide_icons.dart";
 import "package:url_launcher/url_launcher.dart";
+import "package:webview_flutter/webview_flutter.dart";
 import "../../core/theme/app_colors.dart";
 import "../../core/theme/app_dimensions.dart";
 import "../../core/widgets/app_badge.dart";
@@ -14,6 +15,84 @@ import "../contacts/contacts_provider.dart";
 import "../discovery/discovery_provider.dart";
 import "../favorites/favorites_provider.dart";
 import "../reviews/reviews_provider.dart";
+
+String? _externalHref(String? raw) {
+  final t = (raw ?? "").trim();
+  if (t.isEmpty) return null;
+  if (RegExp(r"^https?://", caseSensitive: false).hasMatch(t)) return t;
+  if (t.startsWith("//")) return "https:$t";
+  return "https://$t";
+}
+
+String? _instagramHref(String? raw) {
+  final t = (raw ?? "").trim();
+  if (t.isEmpty) return null;
+  if (RegExp(r"^https?://", caseSensitive: false).hasMatch(t)) return t;
+  final h = t.replaceFirst(RegExp(r"^@+"), "").replaceFirst(RegExp(r"^/+"), "");
+  if (h.isEmpty) return null;
+  return "https://www.instagram.com/$h";
+}
+
+String? _facebookHref(String? raw) {
+  final t = (raw ?? "").trim();
+  if (t.isEmpty) return null;
+  if (RegExp(r"^https?://", caseSensitive: false).hasMatch(t)) return t;
+  final h = t.replaceFirst(RegExp(r"^@+"), "").replaceFirst(RegExp(r"^/+"), "");
+  if (h.isEmpty) return null;
+  return "https://www.facebook.com/$h";
+}
+
+class _ClinicMapWebView extends StatefulWidget {
+  final String embedUrl;
+
+  const _ClinicMapWebView({required this.embedUrl});
+
+  @override
+  State<_ClinicMapWebView> createState() => _ClinicMapWebViewState();
+}
+
+class _ClinicMapWebViewState extends State<_ClinicMapWebView> {
+  late final WebViewController _controller;
+  var _loading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = WebViewController()
+      ..setJavaScriptMode(JavaScriptMode.unrestricted)
+      ..setBackgroundColor(AppColors.neutralBadgeBg)
+      ..setNavigationDelegate(
+        NavigationDelegate(
+          onPageFinished: (_) {
+            if (mounted) setState(() => _loading = false);
+          }
+        )
+      )
+      ..loadRequest(Uri.parse(widget.embedUrl));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(12),
+      child: SizedBox(
+        height: 220,
+        width: double.infinity,
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            WebViewWidget(controller: _controller),
+            if (_loading)
+              const ColoredBox(
+                color: Colors.white,
+                child: Center(child: CircularProgressIndicator())
+              )
+          ]
+        )
+      )
+    );
+  }
+}
 
 class ListingDetailsPage extends ConsumerStatefulWidget {
   final String listingId;
@@ -263,13 +342,7 @@ class _ListingDetailsPageState extends ConsumerState<ListingDetailsPage> {
                       icon: const LIcon(LucideIcons.moreHorizontal, size: 24),
                       onSelected: (value) {
                         if (value == "edit" && isLoggedIn && clinic.viewerIsOwner) {
-                          context.push(
-                            "/owner/clinic/$listingId/edit"
-                            "?name=${Uri.encodeComponent(clinic.name)}"
-                            "&addressLine=${Uri.encodeComponent(clinic.addressLine ?? "")}"
-                            "&phone=${Uri.encodeComponent(clinic.phone ?? "")}"
-                            "&whatsappPhone=${Uri.encodeComponent(clinic.whatsappPhone ?? "")}"
-                          );
+                          context.push("/owner/clinic/$listingId/edit");
                         }
                         if (value == "claim" && !clinic.isClaimed) {
                           context.push(
@@ -545,6 +618,11 @@ class _ListingDetailsPageState extends ConsumerState<ListingDetailsPage> {
                           )
                         ]
                       ),
+                      const SizedBox(height: 14),
+                      _ClinicMapWebView(
+                        embedUrl:
+                            "https://maps.google.com/maps?q=${Uri.encodeComponent(addressText)}&hl=pt&z=15&output=embed"
+                      ),
                       if ((clinic.phone?.isNotEmpty ?? false) ||
                           (clinic.whatsappPhone?.isNotEmpty ?? false)) ...[
                         const SizedBox(height: 16),
@@ -616,6 +694,69 @@ class _ListingDetailsPageState extends ConsumerState<ListingDetailsPage> {
                             )
                           )
                         ]
+                      ),
+                      Builder(
+                        builder: (context) {
+                          final site = _externalHref(clinic.websiteUrl);
+                          final ig = _instagramHref(clinic.instagramUrl);
+                          final fb = _facebookHref(clinic.facebookUrl);
+                          if (site == null && ig == null && fb == null) {
+                            return const SizedBox.shrink();
+                          }
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              const SizedBox(height: 18),
+                              Text(
+                                "Site e redes",
+                                style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700)
+                              ),
+                              const SizedBox(height: 10),
+                              Wrap(
+                                spacing: 10,
+                                runSpacing: 10,
+                                children: [
+                                  if (site != null)
+                                    OutlinedButton.icon(
+                                      onPressed: () async {
+                                        await _openExternalUri(
+                                          context,
+                                          Uri.parse(site),
+                                          fallbackMessage: "Não foi possível abrir o site."
+                                        );
+                                      },
+                                      icon: const LIcon(LucideIcons.globe, size: 18),
+                                      label: const Text("Site")
+                                    ),
+                                  if (ig != null)
+                                    OutlinedButton.icon(
+                                      onPressed: () async {
+                                        await _openExternalUri(
+                                          context,
+                                          Uri.parse(ig),
+                                          fallbackMessage: "Não foi possível abrir o Instagram."
+                                        );
+                                      },
+                                      icon: const LIcon(LucideIcons.instagram, size: 18),
+                                      label: const Text("Instagram")
+                                    ),
+                                  if (fb != null)
+                                    OutlinedButton.icon(
+                                      onPressed: () async {
+                                        await _openExternalUri(
+                                          context,
+                                          Uri.parse(fb),
+                                          fallbackMessage: "Não foi possível abrir o Facebook."
+                                        );
+                                      },
+                                      icon: const LIcon(LucideIcons.facebook, size: 18),
+                                      label: const Text("Facebook")
+                                    )
+                                ]
+                              )
+                            ]
+                          );
+                        }
                       ),
                       if (clinic.description != null && clinic.description!.isNotEmpty) ...[
                         const SizedBox(height: AppDim.space3),

@@ -25,6 +25,55 @@ function buildAddress(clinic: ClinicListing): string {
   return primary;
 }
 
+function mapsEmbedSrc(clinic: ClinicListing): string {
+  const q = buildAddress(clinic);
+  return `https://maps.google.com/maps?q=${encodeURIComponent(q)}&hl=pt&z=15&output=embed`;
+}
+
+function externalHref(raw: string | null | undefined): string | null {
+  const t = (raw ?? "").trim();
+  if (!t) {
+    return null;
+  }
+  if (/^https?:\/\//i.test(t)) {
+    return t;
+  }
+  if (t.startsWith("//")) {
+    return `https:${t}`;
+  }
+  return `https://${t}`;
+}
+
+function instagramHref(raw: string | null | undefined): string | null {
+  const t = (raw ?? "").trim();
+  if (!t) {
+    return null;
+  }
+  if (/^https?:\/\//i.test(t)) {
+    return t;
+  }
+  const h = t.replace(/^@+/, "").replace(/^\//, "");
+  if (!h) {
+    return null;
+  }
+  return `https://www.instagram.com/${h}`;
+}
+
+function facebookHref(raw: string | null | undefined): string | null {
+  const t = (raw ?? "").trim();
+  if (!t) {
+    return null;
+  }
+  if (/^https?:\/\//i.test(t)) {
+    return t;
+  }
+  const h = t.replace(/^@+/, "").replace(/^\//, "");
+  if (!h) {
+    return null;
+  }
+  return `https://www.facebook.com/${h}`;
+}
+
 export default function ClinicaDetailPage() {
   const router = useRouter();
   const id = typeof router.query.id === "string" ? router.query.id : "";
@@ -45,6 +94,8 @@ export default function ClinicaDetailPage() {
     const q = buildAddress(clinic);
     return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(q)}`;
   }, [clinic]);
+
+  const embedSrc = useMemo(() => (clinic ? mapsEmbedSrc(clinic) : ""), [clinic]);
 
   const load = useCallback(async () => {
     if (!id) {
@@ -160,17 +211,6 @@ export default function ClinicaDetailPage() {
           <button type="button" className="btn-ghost" onClick={() => void toggleFavorite()}>
             {favoriteId ? "Remover dos favoritos" : "Salvar nos favoritos"}
           </button>
-          {mapsUrl ? (
-            <a
-              href={mapsUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="btn-ghost"
-              style={{ textDecoration: "none" }}
-            >
-              Ver no Google Maps
-            </a>
-          ) : null}
         </div>
 
         <header style={{ marginBottom: 24 }}>
@@ -202,6 +242,56 @@ export default function ClinicaDetailPage() {
           )}
         </header>
 
+        {clinic && embedSrc ? (
+          <section
+            className="card"
+            style={{
+              marginBottom: 28,
+              padding: 0,
+              overflow: "hidden",
+              border: "1px solid var(--color-divider)",
+              boxShadow: "0 8px 28px rgba(15, 118, 110, 0.08)"
+            }}
+          >
+            <div style={{ padding: "18px 22px 0" }}>
+              <h2 style={{ fontSize: 18, margin: 0 }}>Mapa</h2>
+              <p className="muted" style={{ fontSize: 14, margin: "8px 0 0", lineHeight: 1.45 }}>
+                Localização aproximada com base no endereço cadastrado.
+              </p>
+            </div>
+            <div
+              style={{
+                marginTop: 14,
+                width: "100%",
+                aspectRatio: "16 / 10",
+                minHeight: 260,
+                background: "var(--color-surface-muted, #e8f4f2)"
+              }}
+            >
+              <iframe
+                title={`Mapa — ${clinic.name}`}
+                src={embedSrc}
+                loading="lazy"
+                style={{ border: 0, width: "100%", height: "100%", display: "block" }}
+                referrerPolicy="no-referrer-when-downgrade"
+              />
+            </div>
+            {mapsUrl ? (
+              <div style={{ padding: "12px 22px 18px" }}>
+                <a
+                  href={mapsUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="btn-ghost"
+                  style={{ display: "inline-block", textDecoration: "none", fontWeight: 600 }}
+                >
+                  Abrir no Google Maps (nova aba)
+                </a>
+              </div>
+            ) : null}
+          </section>
+        ) : null}
+
         <div className="grid-2" style={{ gap: 24 }}>
           <section className="card" style={{ padding: 22 }}>
             <h2 style={{ margin: "0 0 12px", fontSize: 18 }}>Contato</h2>
@@ -222,6 +312,55 @@ export default function ClinicaDetailPage() {
               </p>
             ) : null}
             {!phone && !wa ? <p className="muted">Contato não informado.</p> : null}
+
+            {(() => {
+              const site = externalHref(clinic.websiteUrl);
+              const ig = instagramHref(clinic.instagramUrl);
+              const fb = facebookHref(clinic.facebookUrl);
+              if (!site && !ig && !fb) {
+                return null;
+              }
+              return (
+                <div style={{ marginTop: 20, paddingTop: 18, borderTop: "1px solid var(--color-divider)" }}>
+                  <h3 style={{ fontSize: 15, margin: "0 0 12px", fontWeight: 700 }}>Site e redes</h3>
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
+                    {site ? (
+                      <a
+                        href={site}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="btn-ghost"
+                        style={{ textDecoration: "none", fontWeight: 600 }}
+                      >
+                        Site
+                      </a>
+                    ) : null}
+                    {ig ? (
+                      <a
+                        href={ig}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="btn-ghost"
+                        style={{ textDecoration: "none", fontWeight: 600 }}
+                      >
+                        Instagram
+                      </a>
+                    ) : null}
+                    {fb ? (
+                      <a
+                        href={fb}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="btn-ghost"
+                        style={{ textDecoration: "none", fontWeight: 600 }}
+                      >
+                        Facebook
+                      </a>
+                    ) : null}
+                  </div>
+                </div>
+              );
+            })()}
 
             {token ? (
               <div style={{ display: "flex", flexWrap: "wrap", gap: 10, marginTop: 16 }}>

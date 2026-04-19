@@ -8,6 +8,9 @@ class ClinicListing {
   final String? zipcode;
   final String? phone;
   final String? whatsappPhone;
+  final String? websiteUrl;
+  final String? instagramUrl;
+  final String? facebookUrl;
   final bool addedByCommunity;
   final bool isClaimed;
   final bool isVerified;
@@ -30,6 +33,9 @@ class ClinicListing {
     this.zipcode,
     this.phone,
     this.whatsappPhone,
+    this.websiteUrl,
+    this.instagramUrl,
+    this.facebookUrl,
     required this.addedByCommunity,
     required this.isClaimed,
     required this.isVerified,
@@ -61,6 +67,9 @@ class ClinicListing {
       zipcode: json["zipcode"]?.toString(),
       phone: json["phone"]?.toString(),
       whatsappPhone: json["whatsappPhone"]?.toString(),
+      websiteUrl: json["websiteUrl"]?.toString(),
+      instagramUrl: json["instagramUrl"]?.toString(),
+      facebookUrl: json["facebookUrl"]?.toString(),
       addedByCommunity: json["addedByCommunity"] == true,
       isClaimed: json["isClaimed"] == true,
       isVerified: json["isVerified"] == true,

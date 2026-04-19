@@ -62,7 +62,10 @@ class CollaborationApi {
     String? name,
     String? addressLine,
     String? phone,
-    String? whatsappPhone
+    String? whatsappPhone,
+    String? websiteUrl,
+    String? instagramUrl,
+    String? facebookUrl
   }) async {
     await _dio.patch(
       "/owner/profiles/clinics/$clinicId",
@@ -70,7 +73,10 @@ class CollaborationApi {
         "name": name,
         "addressLine": addressLine,
         "phone": phone,
-        "whatsappPhone": whatsappPhone
+        "whatsappPhone": whatsappPhone,
+        "websiteUrl": websiteUrl,
+        "instagramUrl": instagramUrl,
+        "facebookUrl": facebookUrl
       }
     );
   }

@@ -12,6 +12,9 @@ export type ClinicListing = {
   zipcode?: string | null;
   phone?: string | null;
   whatsappPhone?: string | null;
+  websiteUrl?: string | null;
+  instagramUrl?: string | null;
+  facebookUrl?: string | null;
   addedByCommunity: boolean;
   isClaimed: boolean;
   isVerified: boolean;

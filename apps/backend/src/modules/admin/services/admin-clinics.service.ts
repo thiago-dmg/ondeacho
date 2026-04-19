@@ -147,6 +147,9 @@ export class AdminClinicsService {
       zipcode: dto.zipcode ?? null,
       phone: dto.phone ?? null,
       whatsappPhone: dto.whatsappPhone ?? null,
+      websiteUrl: dto.websiteUrl?.trim() || null,
+      instagramUrl: dto.instagramUrl?.trim() || null,
+      facebookUrl: dto.facebookUrl?.trim() || null,
       rating: 0,
       acceptsOnline: dto.acceptsOnline ?? false,
       supportsTeaTdh: dto.supportsTeaTdh ?? true,
@@ -173,7 +176,10 @@ export class AdminClinicsService {
       addressNumber: dto.addressNumber ?? clinic.addressNumber,
       zipcode: dto.zipcode ?? clinic.zipcode,
       phone: dto.phone ?? clinic.phone,
-      whatsappPhone: dto.whatsappPhone ?? clinic.whatsappPhone
+      whatsappPhone: dto.whatsappPhone ?? clinic.whatsappPhone,
+      websiteUrl: dto.websiteUrl !== undefined ? dto.websiteUrl.trim() || null : clinic.websiteUrl,
+      instagramUrl: dto.instagramUrl !== undefined ? dto.instagramUrl.trim() || null : clinic.instagramUrl,
+      facebookUrl: dto.facebookUrl !== undefined ? dto.facebookUrl.trim() || null : clinic.facebookUrl
     });
 
     if (dto.specialtyIds) {

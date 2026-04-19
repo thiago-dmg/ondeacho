@@ -42,6 +42,15 @@ export class ClinicEntity {
   @Column({ name: "whatsapp_phone", type: "varchar", length: 20, nullable: true })
   whatsappPhone!: string | null;
 
+  @Column({ name: "website_url", type: "varchar", length: 500, nullable: true })
+  websiteUrl!: string | null;
+
+  @Column({ name: "instagram_url", type: "varchar", length: 500, nullable: true })
+  instagramUrl!: string | null;
+
+  @Column({ name: "facebook_url", type: "varchar", length: 500, nullable: true })
+  facebookUrl!: string | null;
+
   @Column({ name: "added_by_community", type: "boolean", default: false })
   addedByCommunity!: boolean;
 

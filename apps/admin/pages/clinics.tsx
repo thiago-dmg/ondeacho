@@ -17,6 +17,9 @@ type Clinic = {
   zipcode?: string | null;
   phone?: string | null;
   whatsappPhone?: string | null;
+  websiteUrl?: string | null;
+  instagramUrl?: string | null;
+  facebookUrl?: string | null;
   description?: string | null;
   rating?: number;
   displayRating?: number | null;
@@ -36,6 +39,9 @@ type ClinicForm = {
   zipcode: string;
   phone: string;
   whatsappPhone: string;
+  websiteUrl: string;
+  instagramUrl: string;
+  facebookUrl: string;
   description: string;
   acceptsOnline: boolean;
   supportsTeaTdh: boolean;
@@ -53,6 +59,9 @@ function emptyForm(): ClinicForm {
     zipcode: "",
     phone: "",
     whatsappPhone: "",
+    websiteUrl: "",
+    instagramUrl: "",
+    facebookUrl: "",
     description: "",
     acceptsOnline: false,
     supportsTeaTdh: true,
@@ -71,6 +80,9 @@ function clinicToForm(c: Clinic): ClinicForm {
     zipcode: c.zipcode ?? "",
     phone: c.phone ?? "",
     whatsappPhone: c.whatsappPhone ?? "",
+    websiteUrl: c.websiteUrl ?? "",
+    instagramUrl: c.instagramUrl ?? "",
+    facebookUrl: c.facebookUrl ?? "",
     description: c.description ?? "",
     acceptsOnline: Boolean(c.acceptsOnline),
     supportsTeaTdh: c.supportsTeaTdh !== false,
@@ -97,6 +109,9 @@ function formToPayload(f: ClinicForm) {
     zipcode: f.zipcode.trim() || undefined,
     phone: f.phone.trim() || undefined,
     whatsappPhone: f.whatsappPhone.trim() || undefined,
+    websiteUrl: f.websiteUrl.trim() || undefined,
+    instagramUrl: f.instagramUrl.trim() || undefined,
+    facebookUrl: f.facebookUrl.trim() || undefined,
     description: f.description.trim() || undefined,
     acceptsOnline: f.acceptsOnline,
     supportsTeaTdh: f.supportsTeaTdh,
@@ -240,6 +255,42 @@ function ClinicFormFields({
           className="oa-input"
           value={form.whatsappPhone}
           onChange={(e) => setForm((p) => ({ ...p, whatsappPhone: e.target.value }))}
+        />
+      </div>
+      <div className="oa-field" style={{ gridColumn: "1 / -1" }}>
+        <label className="oa-label" htmlFor="clinic-website">
+          Site (URL)
+        </label>
+        <input
+          id="clinic-website"
+          className="oa-input"
+          placeholder="https://…"
+          value={form.websiteUrl}
+          onChange={(e) => setForm((p) => ({ ...p, websiteUrl: e.target.value }))}
+        />
+      </div>
+      <div className="oa-field">
+        <label className="oa-label" htmlFor="clinic-ig">
+          Instagram (URL ou @perfil)
+        </label>
+        <input
+          id="clinic-ig"
+          className="oa-input"
+          placeholder="@clinica ou URL completa"
+          value={form.instagramUrl}
+          onChange={(e) => setForm((p) => ({ ...p, instagramUrl: e.target.value }))}
+        />
+      </div>
+      <div className="oa-field">
+        <label className="oa-label" htmlFor="clinic-fb">
+          Facebook (URL ou nome da página)
+        </label>
+        <input
+          id="clinic-fb"
+          className="oa-input"
+          placeholder="https://facebook.com/…"
+          value={form.facebookUrl}
+          onChange={(e) => setForm((p) => ({ ...p, facebookUrl: e.target.value }))}
         />
       </div>
       <div className="oa-field" style={{ justifyContent: "center" }}>

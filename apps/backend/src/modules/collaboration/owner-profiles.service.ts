@@ -32,6 +32,9 @@ export class OwnerProfilesService {
     if (dto.addressLine !== undefined) clinic.addressLine = dto.addressLine.trim() || null;
     if (dto.phone !== undefined) clinic.phone = dto.phone.trim() || null;
     if (dto.whatsappPhone !== undefined) clinic.whatsappPhone = dto.whatsappPhone.trim() || null;
+    if (dto.websiteUrl !== undefined) clinic.websiteUrl = dto.websiteUrl.trim() || null;
+    if (dto.instagramUrl !== undefined) clinic.instagramUrl = dto.instagramUrl.trim() || null;
+    if (dto.facebookUrl !== undefined) clinic.facebookUrl = dto.facebookUrl.trim() || null;
 
     return this.clinicsRepository.save(clinic);
   }

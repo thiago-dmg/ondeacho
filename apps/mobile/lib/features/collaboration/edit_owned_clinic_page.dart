@@ -7,19 +7,8 @@ import "collaboration_api.dart";
 
 class EditOwnedClinicPage extends ConsumerStatefulWidget {
   final String clinicId;
-  final String clinicName;
-  final String? addressLine;
-  final String? phone;
-  final String? whatsappPhone;
 
-  const EditOwnedClinicPage({
-    super.key,
-    required this.clinicId,
-    required this.clinicName,
-    this.addressLine,
-    this.phone,
-    this.whatsappPhone
-  });
+  const EditOwnedClinicPage({super.key, required this.clinicId});
 
   @override
   ConsumerState<EditOwnedClinicPage> createState() => _EditOwnedClinicPageState();
@@ -27,25 +16,23 @@ class EditOwnedClinicPage extends ConsumerStatefulWidget {
 
 class _EditOwnedClinicPageState extends ConsumerState<EditOwnedClinicPage> {
   final _formKey = GlobalKey<FormState>();
-  late final TextEditingController _nameController;
-  late final TextEditingController _addressController;
-  late final TextEditingController _phoneController;
-  late final TextEditingController _whatsappController;
+  final _nameController = TextEditingController();
+  final _addressController = TextEditingController();
+  final _phoneController = TextEditingController();
+  final _whatsappController = TextEditingController();
+  final _websiteController = TextEditingController();
+  final _instagramController = TextEditingController();
+  final _facebookController = TextEditingController();
   bool _loading = false;
-  /// Até confirmar em [clinicDetailProvider] que o utilizador é proprietário em `profile_owners`.
   bool _ownerCheckPending = true;
 
   @override
   void initState() {
     super.initState();
-    _nameController = TextEditingController(text: widget.clinicName);
-    _addressController = TextEditingController(text: widget.addressLine ?? "");
-    _phoneController = TextEditingController(text: widget.phone ?? "");
-    _whatsappController = TextEditingController(text: widget.whatsappPhone ?? "");
-    WidgetsBinding.instance.addPostFrameCallback((_) => _ensureViewerIsOwner());
+    WidgetsBinding.instance.addPostFrameCallback((_) => _loadClinicAndVerifyOwner());
   }
 
-  Future<void> _ensureViewerIsOwner() async {
+  Future<void> _loadClinicAndVerifyOwner() async {
     try {
       ref.invalidate(clinicDetailProvider(widget.clinicId));
       final clinic = await ref.read(clinicDetailProvider(widget.clinicId).future);
@@ -59,6 +46,13 @@ class _EditOwnedClinicPageState extends ConsumerState<EditOwnedClinicPage> {
         context.pop();
         return;
       }
+      _nameController.text = clinic.name;
+      _addressController.text = clinic.addressLine ?? "";
+      _phoneController.text = clinic.phone ?? "";
+      _whatsappController.text = clinic.whatsappPhone ?? "";
+      _websiteController.text = clinic.websiteUrl ?? "";
+      _instagramController.text = clinic.instagramUrl ?? "";
+      _facebookController.text = clinic.facebookUrl ?? "";
     } catch (_) {
       if (mounted) {
         context.pop();
@@ -76,6 +70,9 @@ class _EditOwnedClinicPageState extends ConsumerState<EditOwnedClinicPage> {
     _addressController.dispose();
     _phoneController.dispose();
     _whatsappController.dispose();
+    _websiteController.dispose();
+    _instagramController.dispose();
+    _facebookController.dispose();
     super.dispose();
   }
 
@@ -88,7 +85,10 @@ class _EditOwnedClinicPageState extends ConsumerState<EditOwnedClinicPage> {
             name: _nameController.text.trim(),
             addressLine: _addressController.text.trim(),
             phone: _phoneController.text.trim(),
-            whatsappPhone: _whatsappController.text.trim()
+            whatsappPhone: _whatsappController.text.trim(),
+            websiteUrl: _websiteController.text.trim(),
+            instagramUrl: _instagramController.text.trim(),
+            facebookUrl: _facebookController.text.trim()
           );
 
       ref.invalidate(clinicDetailProvider(widget.clinicId));
@@ -147,6 +147,31 @@ class _EditOwnedClinicPageState extends ConsumerState<EditOwnedClinicPage> {
               controller: _whatsappController,
               keyboardType: TextInputType.phone,
               decoration: const InputDecoration(labelText: "WhatsApp")
+            ),
+            const SizedBox(height: 12),
+            TextFormField(
+              controller: _websiteController,
+              keyboardType: TextInputType.url,
+              decoration: const InputDecoration(
+                labelText: "Site (URL)",
+                hintText: "https://…"
+              )
+            ),
+            const SizedBox(height: 12),
+            TextFormField(
+              controller: _instagramController,
+              decoration: const InputDecoration(
+                labelText: "Instagram (URL ou @perfil)",
+                hintText: "@sua_clinica"
+              )
+            ),
+            const SizedBox(height: 12),
+            TextFormField(
+              controller: _facebookController,
+              decoration: const InputDecoration(
+                labelText: "Facebook (URL ou nome da página)",
+                hintText: "https://facebook.com/…"
+              )
             ),
             const SizedBox(height: 20),
             FilledButton(
