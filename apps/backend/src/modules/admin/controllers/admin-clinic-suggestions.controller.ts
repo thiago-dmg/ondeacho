@@ -6,6 +6,7 @@ import { Role } from "../../../common/enums/role.enum";
 import { RolesGuard } from "../../../common/guards/roles.guard";
 import { JwtAuthGuard } from "../../auth/jwt-auth.guard";
 import { ReviewRequestDto } from "../../collaboration/dto/review-request.dto";
+import { ApproveClinicSuggestionDto } from "../dto/approve-clinic-suggestion.dto";
 import { ReviewStatus } from "../../collaboration/enums/review-status.enum";
 import { AdminClinicSuggestionsService } from "../services/admin-clinic-suggestions.service";
 
@@ -31,7 +32,7 @@ export class AdminClinicSuggestionsController {
   approve(
     @Param("id") id: string,
     @CurrentUser() user: { sub: string },
-    @Body() dto: ReviewRequestDto
+    @Body() dto: ApproveClinicSuggestionDto
   ) {
     return this.adminClinicSuggestionsService.approve(id, user.sub, dto);
   }
