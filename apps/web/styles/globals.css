@@ -42,20 +42,22 @@ a:hover {
   text-decoration: underline;
 }
 
-/* Link de contato (tel/WhatsApp): mesma tipografia do corpo, destaque só no hover */
+/* Link de contato (tel/WhatsApp): fora do azul padrão de <a> global */
+.card a.inline-action-link,
 a.inline-action-link {
-  color: inherit;
+  color: var(--color-text) !important;
   font: inherit;
   font-weight: 600;
-  text-decoration: none;
+  text-decoration: none !important;
   border-bottom: 1px solid rgba(100, 116, 139, 0.35);
   transition: color 0.15s ease, border-color 0.15s ease;
 }
 
+.card a.inline-action-link:hover,
 a.inline-action-link:hover {
-  color: var(--color-primary);
+  color: var(--color-primary) !important;
   border-bottom-color: rgba(15, 118, 110, 0.45);
-  text-decoration: none;
+  text-decoration: none !important;
 }
 
 h1,

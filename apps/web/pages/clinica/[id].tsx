@@ -156,13 +156,17 @@ function FavoriteHeartButton({
   active,
   disabled,
   onClick,
-  title
+  title,
+  size = "default"
 }: {
   active: boolean;
   disabled?: boolean;
   onClick: () => void;
   title: string;
+  size?: "default" | "compact";
 }) {
+  const dim = size === "compact" ? 40 : 48;
+  const icon = size === "compact" ? 22 : 26;
   return (
     <button
       type="button"
@@ -172,27 +176,41 @@ function FavoriteHeartButton({
       aria-pressed={active}
       title={title}
       style={{
-        width: 48,
-        height: 48,
+        width: dim,
+        height: dim,
+        flexShrink: 0,
         borderRadius: "50%",
         padding: 0,
         display: "inline-flex",
         alignItems: "center",
         justifyContent: "center",
-        border: active ? "none" : "2px solid rgba(13, 148, 136, 0.5)",
+        border: active ? "none" : "2px solid rgba(13, 148, 136, 0.45)",
         background: active ? "linear-gradient(135deg, #0d9488, #14b8a6)" : "#fff",
         color: active ? "#fff" : "#0f766e",
         cursor: disabled ? "not-allowed" : "pointer",
         opacity: 1,
-        boxShadow: active ? "0 6px 20px rgba(13, 148, 136, 0.35)" : "none",
+        boxShadow: active && size === "default" ? "0 4px 14px rgba(13, 148, 136, 0.28)" : "none",
         transition: "transform 0.12s ease, box-shadow 0.15s ease"
       }}
     >
-      <svg width={26} height={26} viewBox="0 0 24 24" fill={active ? "currentColor" : "none"} stroke="currentColor" strokeWidth={2} aria-hidden>
+      <svg width={icon} height={icon} viewBox="0 0 24 24" fill={active ? "currentColor" : "none"} stroke="currentColor" strokeWidth={2} aria-hidden>
         <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
       </svg>
     </button>
   );
+}
+
+function normalizeReviewListPayload(data: unknown): unknown[] {
+  if (Array.isArray(data)) {
+    return data;
+  }
+  if (data !== null && typeof data === "object") {
+    const items = (data as { items?: unknown }).items;
+    if (Array.isArray(items)) {
+      return items;
+    }
+  }
+  return [];
 }
 
 export default function ClinicaDetailPage() {
@@ -207,6 +225,10 @@ export default function ClinicaDetailPage() {
   const [error, setError] = useState<string | null>(null);
   const [favoriteId, setFavoriteId] = useState<string | null>(null);
   const [contactMsg, setContactMsg] = useState<string | null>(null);
+  const [reviewRating, setReviewRating] = useState(0);
+  const [reviewComment, setReviewComment] = useState("");
+  const [reviewBusy, setReviewBusy] = useState(false);
+  const [reviewMsg, setReviewMsg] = useState<string | null>(null);
 
   const mapsUrl = useMemo(() => {
     if (!clinic) {
@@ -226,15 +248,16 @@ export default function ClinicaDetailPage() {
     setError(null);
     try {
       const authToken = getWebToken();
-      const [raw, sum, revs] = await Promise.all([
+      const [raw, sum, revsPayload] = await Promise.all([
         apiRequest<Record<string, unknown>>(`/listings/${id}`, { skipAuth: !authToken }),
         apiRequest<ReviewSummary>(`/reviews/listing/${id}/summary`, { skipAuth: true }),
-        apiRequest<unknown[]>(`/reviews/listing/${id}`, { skipAuth: true })
+        apiRequest<unknown>(`/reviews/listing/${id}`, { skipAuth: true })
       ]);
       setClinic(parseClinic(raw));
       setSummary(sum);
+      const revList = normalizeReviewListPayload(revsPayload);
       setReviews(
-        revs
+        revList
           .filter((r): r is Record<string, unknown> => r !== null && typeof r === "object")
           .map(parseReview)
       );
@@ -257,6 +280,48 @@ export default function ClinicaDetailPage() {
   useEffect(() => {
     void load();
   }, [load, sessionFromContext]);
+
+  const submitReview = async () => {
+    if (!clinic || !getWebToken()) {
+      void router.push(`/login?from=${encodeURIComponent(router.asPath)}`);
+      return;
+    }
+    if (reviewRating < 1 || reviewRating > 5) {
+      setReviewMsg("Escolha uma nota de 1 a 5 estrelas.");
+      return;
+    }
+    const text = reviewComment.trim();
+    if (text.length < 3) {
+      setReviewMsg("Escreva um comentário (mínimo 3 caracteres).");
+      return;
+    }
+    setReviewMsg(null);
+    setReviewBusy(true);
+    try {
+      await apiRequest("/reviews", {
+        method: "POST",
+        body: JSON.stringify({ clinicId: clinic.id, rating: reviewRating, comment: text })
+      });
+      setReviewComment("");
+      setReviewRating(0);
+      setReviewMsg("Obrigado! Sua avaliação foi enviada e aguarda moderação.");
+      const [sum, revsPayload] = await Promise.all([
+        apiRequest<ReviewSummary>(`/reviews/listing/${clinic.id}/summary`, { skipAuth: true }),
+        apiRequest<unknown>(`/reviews/listing/${clinic.id}`, { skipAuth: true })
+      ]);
+      setSummary(sum);
+      const revList = normalizeReviewListPayload(revsPayload);
+      setReviews(
+        revList
+          .filter((r): r is Record<string, unknown> => r !== null && typeof r === "object")
+          .map(parseReview)
+      );
+    } catch (e) {
+      setReviewMsg(e instanceof Error ? e.message : "Não foi possível enviar a avaliação.");
+    } finally {
+      setReviewBusy(false);
+    }
+  };
 
   const toggleFavorite = async () => {
     if (!getWebToken() || !clinic) {
@@ -363,20 +428,22 @@ export default function ClinicaDetailPage() {
       <div className="container" style={{ paddingTop: 8, paddingBottom: 48 }}>
         <div className="clinica-detail-layout">
           <section className="card clinica-detail-comunicacao" style={{ padding: 22, display: "flex", flexDirection: "column", gap: 0 }}>
-            <h2 style={{ margin: "0 0 14px", fontSize: 22, letterSpacing: "-0.02em" }}>Contato e redes</h2>
-
             <div
               style={{
                 display: "flex",
-                flexWrap: "wrap",
-                alignItems: "center",
-                gap: 14,
-                marginBottom: 18,
-                paddingBottom: 18,
+                justifyContent: "space-between",
+                alignItems: "flex-start",
+                gap: 12,
+                marginBottom: 14,
+                paddingBottom: 16,
                 borderBottom: "1px solid var(--color-divider)"
               }}
             >
+              <h2 style={{ margin: 0, fontSize: 22, letterSpacing: "-0.02em", lineHeight: 1.25, flex: "1 1 auto", minWidth: 0 }}>
+                Contato e redes
+              </h2>
               <FavoriteHeartButton
+                size="compact"
                 active={Boolean(favoriteId)}
                 disabled={false}
                 title={
@@ -388,16 +455,16 @@ export default function ClinicaDetailPage() {
                 }
                 onClick={() => void toggleFavorite()}
               />
-              <div style={{ flex: "1 1 200px", minWidth: 0 }}>
-                <p style={{ margin: 0, fontWeight: 700, fontSize: 15, color: "#134e4a" }}>Favoritos</p>
-                <p className="muted" style={{ margin: "6px 0 0", fontSize: 14, lineHeight: 1.45 }}>
-                  {!hasSession
-                    ? "Entre para salvar esta clínica e acessar mais rápido depois."
-                    : isOwner
-                      ? "Como dono do perfil, use o coração para marcar sua clínica nos favoritos (igual ao app)."
-                      : "Salve a clínica nos favoritos para encontrar depois com facilidade."}
-                </p>
-              </div>
+            </div>
+            <div style={{ marginBottom: 18, paddingBottom: 18, borderBottom: "1px solid var(--color-divider)" }}>
+              <p style={{ margin: 0, fontWeight: 700, fontSize: 15, color: "#134e4a" }}>Favoritos</p>
+              <p className="muted" style={{ margin: "6px 0 0", fontSize: 14, lineHeight: 1.45 }}>
+                {!hasSession
+                  ? "Entre para salvar esta clínica e acessar mais rápido depois."
+                  : isOwner
+                    ? "Como dono do perfil, use o coração acima para marcar sua clínica nos favoritos (igual ao app)."
+                    : "Use o coração acima para salvar a clínica e encontrar depois com facilidade."}
+              </p>
             </div>
 
             {phone ? (
@@ -562,10 +629,9 @@ export default function ClinicaDetailPage() {
         </div>
 
         {clinic.description ? (
-          <section style={{ marginTop: 32 }}>
+          <section className="card" style={{ marginTop: 28, padding: 22 }}>
             <h2 style={{ fontSize: 22, margin: "0 0 12px", letterSpacing: "-0.02em" }}>Sobre</h2>
             <p
-              className="muted"
               style={{
                 whiteSpace: "pre-wrap",
                 maxWidth: 720,
@@ -580,26 +646,122 @@ export default function ClinicaDetailPage() {
           </section>
         ) : null}
 
-        <section style={{ marginTop: 32 }}>
-          <h2 style={{ fontSize: 22, margin: "0 0 12px", letterSpacing: "-0.02em" }}>Avaliações da comunidade</h2>
+        <section className="card" style={{ marginTop: 28, padding: 22 }}>
+          <h2 style={{ fontSize: 22, margin: "0 0 8px", letterSpacing: "-0.02em" }}>Avaliações da comunidade</h2>
+          <p className="muted" style={{ margin: "0 0 18px", fontSize: 14, lineHeight: 1.5 }}>
+            Notas e comentários aprovados pela moderação. Envie a sua experiência — publicamos após análise.
+          </p>
           {reviews.length === 0 ? (
-            <p className="muted">Nenhuma avaliação aprovada ainda.</p>
+            <p className="muted" style={{ margin: "0 0 20px" }}>
+              Nenhuma avaliação aprovada ainda nesta página.
+            </p>
           ) : (
-            <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
+            <ul style={{ listStyle: "none", padding: 0, margin: "0 0 22px" }}>
               {reviews.map((r) => (
-                <li key={r.id} className="card" style={{ padding: 16, marginBottom: 12 }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
+                <li
+                  key={r.id}
+                  style={{
+                    padding: "14px 0",
+                    borderBottom: "1px solid var(--color-divider)"
+                  }}
+                >
+                  <div style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
                     <strong>{r.authorName}</strong>
                     <StarRating value={r.rating} size="sm" />
                   </div>
                   <p className="muted" style={{ margin: "6px 0", fontSize: 13 }}>
-                    {new Date(r.createdAt).toLocaleDateString("pt-BR")}
+                    {r.createdAt ? new Date(r.createdAt).toLocaleDateString("pt-BR") : "—"}
                   </p>
-                  <p style={{ margin: 0 }}>{r.comment}</p>
+                  <p style={{ margin: 0, lineHeight: 1.5 }}>{r.comment}</p>
                 </li>
               ))}
             </ul>
           )}
+
+          <div
+            style={{
+              marginTop: reviews.length === 0 ? 0 : 8,
+              paddingTop: 18,
+              borderTop: "1px solid var(--color-divider)"
+            }}
+          >
+            <h3 style={{ margin: "0 0 10px", fontSize: 17, fontWeight: 700, color: "#134e4a" }}>Deixe sua avaliação</h3>
+            {!hasSession ? (
+              <p className="muted" style={{ margin: 0, fontSize: 14 }}>
+                <Link href={`/login?from=${encodeURIComponent(router.asPath)}`}>Entre na sua conta</Link> para enviar uma
+                avaliação desta clínica.
+              </p>
+            ) : isOwner ? (
+              <p className="muted" style={{ margin: 0, fontSize: 14, lineHeight: 1.55 }}>
+                Contas vinculadas a este perfil não publicam avaliação na própria ficha. Outros usuários podem comentar
+                após o login.
+              </p>
+            ) : (
+              <>
+                <p className="muted" style={{ margin: "0 0 12px", fontSize: 13 }}>
+                  Nota de 1 a 5 e um comentário curto. Cada conta pode enviar uma avaliação por clínica.
+                </p>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 12 }} role="group" aria-label="Nota">
+                  {[1, 2, 3, 4, 5].map((n) => (
+                    <button
+                      key={n}
+                      type="button"
+                      onClick={() => {
+                        setReviewRating(n);
+                        setReviewMsg(null);
+                      }}
+                      style={{
+                        minWidth: 40,
+                        padding: "8px 10px",
+                        borderRadius: 10,
+                        border:
+                          reviewRating === n ? "2px solid var(--color-primary)" : "1px solid var(--color-divider)",
+                        background: reviewRating === n ? "rgba(13, 148, 136, 0.1)" : "#fff",
+                        color: "#0f766e",
+                        fontWeight: 700,
+                        cursor: "pointer",
+                        fontFamily: "inherit"
+                      }}
+                    >
+                      {n} ★
+                    </button>
+                  ))}
+                </div>
+                <label style={{ display: "block", marginBottom: 10 }}>
+                  <span className="muted" style={{ display: "block", marginBottom: 6, fontSize: 13 }}>
+                    Comentário
+                  </span>
+                  <textarea
+                    className="input"
+                    rows={4}
+                    value={reviewComment}
+                    onChange={(e) => {
+                      setReviewComment(e.target.value);
+                      setReviewMsg(null);
+                    }}
+                    placeholder="Como foi o atendimento, espera, convênio…"
+                    style={{ minHeight: 100, resize: "vertical" }}
+                  />
+                </label>
+                <button type="button" className="btn-primary" disabled={reviewBusy} onClick={() => void submitReview()}>
+                  {reviewBusy ? "Enviando…" : "Enviar avaliação"}
+                </button>
+                {reviewMsg ? (
+                  <p
+                    style={{
+                      marginTop: 12,
+                      marginBottom: 0,
+                      fontSize: 14,
+                      fontWeight: 600,
+                      color: reviewMsg.startsWith("Obrigado") ? "#0f766e" : "#b45309"
+                    }}
+                  >
+                    {reviewMsg}
+                  </p>
+                ) : null}
+              </>
+            )}
+          </div>
         </section>
       </div>
     </SiteLayout>

@@ -61,12 +61,30 @@ export function parseClinic(raw: Record<string, unknown>): ClinicListing {
   };
 }
 
+function stringFromDateLike(v: unknown): string {
+  if (v == null) {
+    return "";
+  }
+  if (typeof v === "string") {
+    return v;
+  }
+  if (typeof v === "number" && Number.isFinite(v)) {
+    return new Date(v).toISOString();
+  }
+  if (v instanceof Date) {
+    return v.toISOString();
+  }
+  return String(v);
+}
+
 export function parseReview(raw: Record<string, unknown>): PublicReview {
+  const createdRaw = raw.createdAt ?? raw.created_at;
+  const authorRaw = raw.authorName ?? raw.author_name;
   return {
     id: String(raw.id ?? ""),
     rating: Number(raw.rating ?? 0) || 0,
     comment: String(raw.comment ?? ""),
-    createdAt: String(raw.createdAt ?? ""),
-    authorName: String(raw.authorName ?? "Usuário")
+    createdAt: stringFromDateLike(createdRaw),
+    authorName: String(authorRaw ?? "Usuário")
   };
 }

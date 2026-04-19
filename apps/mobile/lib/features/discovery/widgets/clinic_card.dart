@@ -20,7 +20,16 @@ String _cityWithUf(ClinicListing c) {
 
 String _addressQuery(ClinicListing c) {
   final street = [c.addressLine, c.addressNumber].where((v) => (v ?? "").trim().isNotEmpty).join(", ");
-  final loc = [c.neighborhood, _cityWithUf(c)].where((v) => v.trim().isNotEmpty).join(" - ");
+  final locParts = <String>[];
+  final nb = c.neighborhood?.trim();
+  if (nb != null && nb.isNotEmpty) {
+    locParts.add(nb);
+  }
+  final cityLine = _cityWithUf(c);
+  if (cityLine.trim().isNotEmpty) {
+    locParts.add(cityLine);
+  }
+  final loc = locParts.join(" - ");
   final primary = [street, loc].where((v) => v.isNotEmpty).join(" • ");
   if (primary.isEmpty) {
     return c.city;
