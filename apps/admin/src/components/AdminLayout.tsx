@@ -12,7 +12,8 @@ const NAV: { href: string; label: string }[] = [
   { href: "/insurances", label: "Convênios" },
   { href: "/reviews", label: "Avaliações" },
   { href: "/clinic-suggestions", label: "Sugestões" },
-  { href: "/profile-claims", label: "Reivindicações" }
+  { href: "/profile-claims", label: "Reivindicações" },
+  { href: "/users", label: "Usuários" }
 ];
 
 function NavIcon({ href }: { href: string }) {
@@ -65,6 +66,12 @@ function NavIcon({ href }: { href: string }) {
       return (
         <svg viewBox="0 0 24 24" {...p}>
           <path d="M9 12h6M9 16h6M7 4h10a2 2 0 012 2v14l-4-2-3 1-3-1-4 2V6a2 2 0 012-2z" />
+        </svg>
+      );
+    case "/users":
+      return (
+        <svg viewBox="0 0 24 24" {...p}>
+          <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2M9 11a4 4 0 100-8 4 4 0 000 8zM23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75" />
         </svg>
       );
     default:
@@ -140,6 +147,13 @@ export function AdminLayout({ children, title, description, variant = "app" }: P
             })}
           </nav>
           <div className="oa-sidebar__footer">
+            <Link
+              href="/profile"
+              className="oa-btn oa-btn--ghost"
+              style={{ width: "100%", marginBottom: 8, textAlign: "center", textDecoration: "none", display: "block" }}
+            >
+              Meu perfil
+            </Link>
             <button type="button" className="oa-btn oa-btn--ghost" style={{ width: "100%" }} onClick={() => void logout()}>
               Sair
             </button>

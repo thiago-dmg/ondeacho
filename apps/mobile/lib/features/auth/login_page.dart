@@ -192,6 +192,13 @@ class _LoginPageState extends ConsumerState<LoginPage> {
               _registerMode ? "Já tenho conta — entrar" : "Não tenho conta — criar conta"
             )
           ),
+          if (!_registerMode) ...[
+            const SizedBox(height: 8),
+            TextButton(
+              onPressed: authState.loading ? null : () => context.push("/forgot-password"),
+              child: const Text("Esqueci minha senha")
+            )
+          ],
           if (authState.error != null) ...[
             const SizedBox(height: 12),
             Text(

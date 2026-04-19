@@ -7,9 +7,11 @@ import { AuthController } from "./auth.controller";
 import { AuthService } from "./auth.service";
 import { UserEntity } from "../users/entities/user.entity";
 import { JwtStrategy } from "./jwt.strategy";
+import { MailModule } from "../mail/mail.module";
 
 @Module({
   imports: [
+    MailModule,
     TypeOrmModule.forFeature([UserEntity]),
     PassportModule,
     JwtModule.registerAsync({

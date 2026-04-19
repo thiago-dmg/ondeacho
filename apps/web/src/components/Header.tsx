@@ -40,6 +40,9 @@ export function Header() {
           <Link href="/sugerir" style={{ fontWeight: 600, fontSize: 15 }}>
             Sugerir
           </Link>
+          <Link href="/suporte" style={{ fontWeight: 600, fontSize: 15 }}>
+            Suporte
+          </Link>
           {token ? (
             <>
               <Link href="/favoritos" style={{ fontWeight: 600, fontSize: 15 }}>

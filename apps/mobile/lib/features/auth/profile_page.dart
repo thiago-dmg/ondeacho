@@ -16,11 +16,17 @@ class ProfilePage extends ConsumerStatefulWidget {
 
 class _ProfilePageState extends ConsumerState<ProfilePage> {
   late final TextEditingController _nameController;
+  late final TextEditingController _currentPwController;
+  late final TextEditingController _newPwController;
+  late final TextEditingController _deletePwController;
 
   @override
   void initState() {
     super.initState();
     _nameController = TextEditingController();
+    _currentPwController = TextEditingController();
+    _newPwController = TextEditingController();
+    _deletePwController = TextEditingController();
   }
 
   @override
@@ -35,6 +41,9 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
   @override
   void dispose() {
     _nameController.dispose();
+    _currentPwController.dispose();
+    _newPwController.dispose();
+    _deletePwController.dispose();
     super.dispose();
   }
 
@@ -108,6 +117,123 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                       }
                     },
               child: Text(auth.loading ? "Salvando..." : "Salvar nome")
+            ),
+            const SizedBox(height: 12),
+            TextButton.icon(
+              onPressed: () => context.push("/support"),
+              icon: const LIcon(LucideIcons.helpCircle, size: LucideSize.body),
+              label: const Text("Suporte")
+            ),
+            const SizedBox(height: AppDim.space3),
+            Text(
+              "Alterar senha",
+              style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700)
+            ),
+            const SizedBox(height: 10),
+            TextField(
+              controller: _currentPwController,
+              obscureText: true,
+              decoration: const InputDecoration(labelText: "Senha atual"),
+              autofillHints: const [AutofillHints.password]
+            ),
+            const SizedBox(height: 10),
+            TextField(
+              controller: _newPwController,
+              obscureText: true,
+              decoration: const InputDecoration(labelText: "Nova senha (mín. 8)"),
+              autofillHints: const [AutofillHints.newPassword]
+            ),
+            const SizedBox(height: 12),
+            OutlinedButton(
+              onPressed: auth.loading
+                  ? null
+                  : () async {
+                      if (_newPwController.text.length < 8) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text("A nova senha deve ter pelo menos 8 caracteres."))
+                        );
+                        return;
+                      }
+                      final ok = await ref.read(authStateProvider.notifier).changePassword(
+                            currentPassword: _currentPwController.text,
+                            newPassword: _newPwController.text
+                          );
+                      if (!context.mounted) {
+                        return;
+                      }
+                      if (ok) {
+                        _currentPwController.clear();
+                        _newPwController.clear();
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text("Senha atualizada."))
+                        );
+                      } else {
+                        final err = ref.read(authStateProvider).error;
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text(err ?? "Não foi possível alterar."))
+                        );
+                      }
+                    },
+              child: const Text("Atualizar senha")
+            ),
+            const SizedBox(height: AppDim.space3),
+            Text(
+              "Encerrar conta",
+              style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.w700,
+                    color: Theme.of(context).colorScheme.error
+                  )
+            ),
+            const SizedBox(height: 8),
+            Text(
+              "Exclui permanentemente o seu utilizador. Confirme com a senha atual.",
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppColors.textSecondary)
+            ),
+            const SizedBox(height: 10),
+            TextField(
+              controller: _deletePwController,
+              obscureText: true,
+              decoration: const InputDecoration(labelText: "Senha para confirmar exclusão")
+            ),
+            const SizedBox(height: 12),
+            OutlinedButton(
+              style: OutlinedButton.styleFrom(
+                foregroundColor: Theme.of(context).colorScheme.error,
+                side: BorderSide(color: Theme.of(context).colorScheme.error.withValues(alpha: 0.5))
+              ),
+              onPressed: auth.loading
+                  ? null
+                  : () async {
+                      final confirm = await showDialog<bool>(
+                        context: context,
+                        builder: (ctx) => AlertDialog(
+                          title: const Text("Excluir conta?"),
+                          content: const Text("Esta ação não pode ser desfeita."),
+                          actions: [
+                            TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text("Cancelar")),
+                            FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text("Excluir"))
+                          ]
+                        )
+                      );
+                      if (confirm != true || !context.mounted) {
+                        return;
+                      }
+                      final ok = await ref
+                          .read(authStateProvider.notifier)
+                          .deleteAccount(_deletePwController.text);
+                      if (!context.mounted) {
+                        return;
+                      }
+                      if (ok) {
+                        context.go("/discovery");
+                      } else {
+                        final err = ref.read(authStateProvider).error;
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text(err ?? "Não foi possível excluir."))
+                        );
+                      }
+                    },
+              child: const Text("Excluir minha conta")
             )
           ] else
             const Padding(

@@ -22,19 +22,39 @@ export class AdminClinicsService {
     private readonly reviewsRepository: Repository<ReviewEntity>
   ) {}
 
-  async list() {
-    const clinics = await this.clinicsRepository.find({
-      relations: { specialties: true, insurances: true },
-      order: { createdAt: "DESC" }
-    });
+  async list(pageRaw = 1, limitRaw = 20, q?: string) {
+    const page = Math.max(1, pageRaw || 1);
+    const limit = Math.min(100, Math.max(1, limitRaw || 20));
+    const qb = this.clinicsRepository.createQueryBuilder("c").orderBy("c.createdAt", "DESC");
+    const term = q?.trim().toLowerCase();
+    if (term) {
+      qb.andWhere(
+        "(LOWER(c.name) LIKE :t OR LOWER(c.city) LIKE :t OR LOWER(COALESCE(c.neighborhood, '')) LIKE :t)",
+        { t: `%${term}%` }
+      );
+    }
+    const total = await qb.clone().getCount();
+    const clinics = await qb
+      .leftJoinAndSelect("c.specialties", "s")
+      .leftJoinAndSelect("c.insurances", "i")
+      .skip((page - 1) * limit)
+      .take(limit)
+      .getMany();
+
     if (clinics.length === 0) {
-      return [];
+      return {
+        items: [] as unknown[],
+        total,
+        page,
+        limit,
+        totalPages: Math.max(1, Math.ceil(total / limit))
+      };
     }
     const byClinic = await aggregateApprovedReviewsByClinicIds(
       this.reviewsRepository,
       clinics.map((c) => c.id)
     );
-    return clinics.map((clinic) => {
+    const items = clinics.map((clinic) => {
       const agg = byClinic.get(clinic.id);
       const { averageRating, reviewCount } = computeAppRating({
         appSumRatings: agg?.sumRatings ?? 0,
@@ -47,6 +67,13 @@ export class AdminClinicsService {
         displayReviewCount: reviewCount
       };
     });
+    return {
+      items,
+      total,
+      page,
+      limit,
+      totalPages: Math.max(1, Math.ceil(total / limit))
+    };
   }
 
   async create(dto: UpsertClinicDto) {

@@ -14,6 +14,8 @@ type AuthContextValue = AuthState & {
   register: (name: string, email: string, password: string) => Promise<void>;
   logout: () => void;
   refreshProfile: () => Promise<void>;
+  changePassword: (currentPassword: string, newPassword: string) => Promise<void>;
+  closeAccount: (password: string) => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -90,6 +92,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setProfile(me);
   }, [token]);
 
+  const changePassword = useCallback(async (currentPassword: string, newPassword: string) => {
+    await apiRequest("/auth/me/password", {
+      method: "PATCH",
+      body: JSON.stringify({ currentPassword, newPassword })
+    });
+  }, []);
+
+  const closeAccount = useCallback(async (password: string) => {
+    await apiRequest("/auth/me/close-account", {
+      method: "POST",
+      body: JSON.stringify({ password })
+    });
+    setWebToken(null);
+    setToken(null);
+    setProfile(null);
+  }, []);
+
   const value = useMemo<AuthContextValue>(
     () => ({
       token,
@@ -98,9 +117,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       login,
       register,
       logout,
-      refreshProfile
+      refreshProfile,
+      changePassword,
+      closeAccount
     }),
-    [token, profile, loading, login, register, logout, refreshProfile]
+    [token, profile, loading, login, register, logout, refreshProfile, changePassword, closeAccount]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

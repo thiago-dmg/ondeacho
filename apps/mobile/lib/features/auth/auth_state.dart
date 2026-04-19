@@ -208,6 +208,68 @@ class AuthStateNotifier extends Notifier<AuthState> {
     state = AuthState(loading: state.loading, token: state.token, profile: state.profile);
   }
 
+  /// Pedido de reset (sempre sucesso genérico no UI se não houver erro de rede).
+  Future<bool> requestPasswordReset(String email) async {
+    state = AuthState(loading: true, token: state.token, profile: state.profile);
+    try {
+      await _dio.post<void>("/auth/forgot-password", data: {"email": email.trim().toLowerCase()});
+      state = AuthState(loading: false, token: state.token, profile: state.profile);
+      return true;
+    } on DioException catch (error) {
+      final message = error.type == DioExceptionType.connectionError ||
+              error.type == DioExceptionType.connectionTimeout
+          ? "Sem conexão com o servidor."
+          : _messageFromResponse(error) ?? "Não foi possível enviar.";
+      state = AuthState(
+        loading: false,
+        token: state.token,
+        profile: state.profile,
+        error: message
+      );
+      return false;
+    }
+  }
+
+  Future<bool> changePassword({
+    required String currentPassword,
+    required String newPassword
+  }) async {
+    final token = state.token;
+    if (token == null) {
+      return false;
+    }
+    state = AuthState(loading: true, token: token, profile: state.profile);
+    try {
+      await _dio.patch<void>(
+        "/auth/me/password",
+        data: {"currentPassword": currentPassword, "newPassword": newPassword}
+      );
+      state = AuthState(loading: false, token: token, profile: state.profile);
+      return true;
+    } on DioException catch (error) {
+      final message = _messageFromResponse(error) ?? "Não foi possível alterar a senha.";
+      state = AuthState(loading: false, token: token, profile: state.profile, error: message);
+      return false;
+    }
+  }
+
+  Future<bool> deleteAccount(String password) async {
+    final token = state.token;
+    if (token == null) {
+      return false;
+    }
+    state = AuthState(loading: true, token: token, profile: state.profile);
+    try {
+      await _dio.post<void>("/auth/me/close-account", data: {"password": password});
+      await logout();
+      return true;
+    } on DioException catch (error) {
+      final message = _messageFromResponse(error) ?? "Não foi possível excluir a conta.";
+      state = AuthState(loading: false, token: token, profile: state.profile, error: message);
+      return false;
+    }
+  }
+
   Future<void> logout() async {
     _dio.options.headers.remove("Authorization");
     await ref.read(sharedPreferencesProvider).remove(_authTokenKey);

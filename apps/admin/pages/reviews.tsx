@@ -1,16 +1,27 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { AdminLayout } from "../src/components/AdminLayout";
+import { AdminPagination } from "../src/components/AdminPagination";
+import { AdminSearchField } from "../src/components/AdminSearchField";
 import { apiRequest } from "../src/services/api";
 
 type Review = {
   id: string;
   clinicId: string;
+  clinicName: string;
   rating: number;
   comment: string;
   status: "pending" | "approved" | "rejected";
 };
 
 type Filter = "all" | Review["status"];
+
+type PageData = {
+  items: Review[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+};
 
 function statusBadge(status: Review["status"]) {
   switch (status) {
@@ -26,22 +37,33 @@ function statusBadge(status: Review["status"]) {
 }
 
 export default function ReviewsPage() {
-  const [items, setItems] = useState<Review[]>([]);
+  const [data, setData] = useState<PageData | null>(null);
   const [filter, setFilter] = useState<Filter>("all");
+  const [page, setPage] = useState(1);
+  const [searchInput, setSearchInput] = useState("");
+  const [debouncedQ, setDebouncedQ] = useState("");
   const [error, setError] = useState("");
 
-  async function load() {
-    setItems(await apiRequest<Review[]>("/admin/reviews"));
-  }
+  useEffect(() => {
+    const t = window.setTimeout(() => setDebouncedQ(searchInput.trim()), 400);
+    return () => window.clearTimeout(t);
+  }, [searchInput]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [filter, debouncedQ]);
+
+  const load = useCallback(async () => {
+    const q = new URLSearchParams({ page: String(page), limit: "12" });
+    if (debouncedQ) q.set("q", debouncedQ);
+    if (filter !== "all") q.set("status", filter);
+    const res = await apiRequest<PageData>(`/admin/reviews?${q.toString()}`);
+    setData(res);
+  }, [page, filter, debouncedQ]);
 
   useEffect(() => {
     void load().catch((e) => setError(e instanceof Error ? e.message : "Erro ao carregar."));
-  }, []);
-
-  const filtered = useMemo(() => {
-    if (filter === "all") return items;
-    return items.filter((r) => r.status === filter);
-  }, [items, filter]);
+  }, [load]);
 
   async function moderate(id: string, status: "approved" | "rejected") {
     setError("");
@@ -74,12 +96,26 @@ export default function ReviewsPage() {
     { id: "rejected", label: "Rejeitadas" }
   ];
 
+  const items = data?.items ?? [];
+
   return (
     <AdminLayout
       title="Avaliações"
       description="Aprove ou rejeite comentários da comunidade. Exclusão remove o registro do banco."
     >
       {error ? <p className="oa-error">{error}</p> : null}
+
+      <div className="oa-toolbar">
+        <AdminSearchField
+          label="Buscar"
+          placeholder="Nome da clínica ou texto do comentário…"
+          value={searchInput}
+          onChange={(v) => {
+            setSearchInput(v);
+            setError("");
+          }}
+        />
+      </div>
 
       <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 20 }}>
         {filters.map((f) => (
@@ -95,12 +131,12 @@ export default function ReviewsPage() {
       </div>
 
       <div className="oa-list-stack">
-        {filtered.map((item) => (
+        {items.map((item) => (
           <article key={item.id} className="oa-card oa-review-card">
             <div className="oa-review-card__meta">
               <strong>Nota {item.rating}</strong>
               {statusBadge(item.status)}
-              <span className="oa-muted">Clínica {item.clinicId.slice(0, 8)}…</span>
+              <span className="oa-muted">{item.clinicName}</span>
             </div>
             <p style={{ margin: "0 0 12px", lineHeight: 1.5 }}>{item.comment || <em className="oa-muted">Sem texto</em>}</p>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
@@ -120,10 +156,21 @@ export default function ReviewsPage() {
             </div>
           </article>
         ))}
-        {filtered.length === 0 ? (
-          <p className="oa-muted">Nenhuma avaliação neste filtro.</p>
-        ) : null}
+        {items.length === 0 ? <p className="oa-muted">Nenhuma avaliação neste filtro.</p> : null}
       </div>
+
+      {data ? (
+        <AdminPagination
+          page={data.page}
+          totalPages={data.totalPages}
+          total={data.total}
+          entityLabel="avaliações"
+          onPageChange={(p) => {
+            setPage(p);
+            window.scrollTo({ top: 0, behavior: "smooth" });
+          }}
+        />
+      ) : null}
     </AdminLayout>
   );
 }

@@ -7,7 +7,9 @@ export const ADMIN_PROTECTED_PATHS = new Set([
   "/insurances",
   "/reviews",
   "/clinic-suggestions",
-  "/profile-claims"
+  "/profile-claims",
+  "/users",
+  "/profile"
 ]);
 
-export const ADMIN_PUBLIC_PATHS = new Set(["/", "/login"]);
+export const ADMIN_PUBLIC_PATHS = new Set(["/", "/login", "/esqueci-senha", "/redefinir-senha"]);

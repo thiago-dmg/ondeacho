@@ -241,14 +241,14 @@ export default function ProfessionalsPage() {
   const [error, setError] = useState("");
 
   async function load() {
-    const [profs, clinicList, specList, insList] = await Promise.all([
+    const [profs, clinicRes, specList, insList] = await Promise.all([
       apiRequest<Professional[]>("/admin/professionals"),
-      apiRequest<ClinicOption[]>("/admin/clinics"),
+      apiRequest<{ items: ClinicOption[] }>("/admin/clinics?limit=500&page=1"),
       apiRequest<CatalogItem[]>("/admin/specialties"),
       apiRequest<CatalogItem[]>("/admin/insurances")
     ]);
     setItems(profs);
-    setClinics(clinicList.map((c) => ({ id: c.id, name: c.name, city: c.city })));
+    setClinics(clinicRes.items.map((c) => ({ id: c.id, name: c.name, city: c.city })));
     setSpecialties(specList);
     setInsurances(insList);
   }

@@ -3,6 +3,16 @@ import { InjectRepository } from "@nestjs/typeorm";
 import { Repository } from "typeorm";
 import { ReviewEntity } from "../../reviews/entities/review.entity";
 
+export type AdminReviewRow = {
+  id: string;
+  clinicId: string;
+  clinicName: string;
+  rating: number;
+  comment: string;
+  status: "pending" | "approved" | "rejected";
+  createdAt: Date;
+};
+
 @Injectable()
 export class AdminReviewsService {
   constructor(
@@ -10,8 +20,41 @@ export class AdminReviewsService {
     private readonly reviewsRepository: Repository<ReviewEntity>
   ) {}
 
-  list() {
-    return this.reviewsRepository.find({ order: { createdAt: "DESC" } });
+  async list(pageRaw = 1, limitRaw = 20, q?: string, status?: string) {
+    const page = Math.max(1, pageRaw || 1);
+    const limit = Math.min(100, Math.max(1, limitRaw || 20));
+    const qb = this.reviewsRepository
+      .createQueryBuilder("r")
+      .leftJoinAndSelect("r.clinic", "clinic")
+      .orderBy("r.createdAt", "DESC");
+    const term = q?.trim().toLowerCase();
+    if (term) {
+      qb.andWhere("(LOWER(clinic.name) LIKE :t OR LOWER(r.comment) LIKE :t)", { t: `%${term}%` });
+    }
+    if (status && status !== "all") {
+      qb.andWhere("r.status = :st", { st: status });
+    }
+    const total = await qb.clone().getCount();
+    const rows = await qb
+      .skip((page - 1) * limit)
+      .take(limit)
+      .getMany();
+    const items: AdminReviewRow[] = rows.map((r) => ({
+      id: r.id,
+      clinicId: r.clinicId,
+      clinicName: r.clinic?.name ?? "—",
+      rating: r.rating,
+      comment: r.comment,
+      status: r.status,
+      createdAt: r.createdAt
+    }));
+    return {
+      items,
+      total,
+      page,
+      limit,
+      totalPages: Math.max(1, Math.ceil(total / limit))
+    };
   }
 
   async moderate(id: string, status: "approved" | "rejected") {

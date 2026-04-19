@@ -2,7 +2,9 @@ import "package:flutter_riverpod/flutter_riverpod.dart";
 import "package:go_router/go_router.dart";
 import "auth_redirect.dart";
 import "../../features/auth/login_page.dart";
+import "../../features/auth/forgot_password_page.dart";
 import "../../features/auth/profile_page.dart";
+import "../../features/support/support_page.dart";
 import "../../features/auth/auth_state.dart";
 import "../../features/collaboration/edit_owned_clinic_page.dart";
 import "../../features/collaboration/profile_claim_page.dart";
@@ -54,6 +56,14 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: "/register",
         builder: (context, state) => const LoginPage(startInRegisterMode: true)
+      ),
+      GoRoute(
+        path: "/forgot-password",
+        builder: (context, state) => const ForgotPasswordPage()
+      ),
+      GoRoute(
+        path: "/support",
+        builder: (context, state) => const SupportPage()
       ),
       GoRoute(
         path: "/discovery",

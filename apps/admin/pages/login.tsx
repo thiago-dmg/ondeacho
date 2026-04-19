@@ -1,4 +1,5 @@
 import { FormEvent, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/router";
 import { AdminLayout } from "../src/components/AdminLayout";
 import { setAdminToken } from "../src/lib/auth";
@@ -103,6 +104,11 @@ export default function LoginPage() {
           <button type="submit" className="oa-btn oa-btn--primary" style={{ width: "100%" }} disabled={loading}>
             {loading ? "Entrando…" : "Entrar"}
           </button>
+          <p style={{ margin: 0, textAlign: "center" }}>
+            <Link href="/esqueci-senha" className="oa-muted" style={{ fontSize: "0.9rem" }}>
+              Esqueci minha senha
+            </Link>
+          </p>
         </form>
         {message ? (
           <p className="oa-error" style={{ marginTop: 16 }}>

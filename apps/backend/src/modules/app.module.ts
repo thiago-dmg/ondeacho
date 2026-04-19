@@ -19,6 +19,7 @@ import { ProfessionalEntity } from "./professionals/entities/professional.entity
 import { FavoriteEntity } from "./favorites/entities/favorite.entity";
 import { ContactEntity } from "./contacts/entities/contact.entity";
 import { CollaborationModule } from "./collaboration/collaboration.module";
+import { SupportModule } from "./support/support.module";
 import { ClinicSuggestionEntity } from "./collaboration/entities/clinic-suggestion.entity";
 import { ProfileClaimRequestEntity } from "./collaboration/entities/profile-claim-request.entity";
 import { ProfileOwnerEntity } from "./collaboration/entities/profile-owner.entity";
@@ -59,7 +60,8 @@ import { StatusHistoryEntity } from "./collaboration/entities/status-history.ent
     ContactsModule,
     ProfessionalsModule,
     HealthModule,
-    CollaborationModule
+    CollaborationModule,
+    SupportModule
   ]
 })
 export class AppModule {}

@@ -11,7 +11,8 @@ const LINKS: { href: string; label: string; hint: string }[] = [
   { href: "/insurances", label: "Convênios", hint: "Planos para filtros e fichas" },
   { href: "/reviews", label: "Avaliações", hint: "Moderação e exclusão" },
   { href: "/clinic-suggestions", label: "Sugestões da comunidade", hint: "Aprovar ou rejeitar cadastros sugeridos" },
-  { href: "/profile-claims", label: "Reivindicações de perfil", hint: "Donos de clínicas e profissionais" }
+  { href: "/profile-claims", label: "Reivindicações de perfil", hint: "Donos de clínicas e profissionais" },
+  { href: "/users", label: "Usuários", hint: "Editar, redefinir senha e remover contas" }
 ];
 
 export default function DashboardPage() {

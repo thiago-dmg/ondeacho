@@ -609,3 +609,34 @@ button {
     padding-top: 0;
   }
 }
+
+.oa-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  align-items: flex-end;
+  margin-bottom: 20px;
+}
+
+.oa-pagination {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 20px;
+  padding: 14px 16px;
+  background: var(--oa-surface);
+  border: 1px solid var(--oa-border);
+  border-radius: var(--oa-radius-sm);
+}
+
+.oa-pagination__meta {
+  font-size: 0.85rem;
+  color: var(--oa-muted);
+}
+
+.oa-pagination__btns {
+  display: flex;
+  gap: 8px;
+}

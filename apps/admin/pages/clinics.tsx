@@ -1,5 +1,7 @@
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useCallback, useEffect, useState } from "react";
 import { AdminLayout } from "../src/components/AdminLayout";
+import { AdminPagination } from "../src/components/AdminPagination";
+import { AdminSearchField } from "../src/components/AdminSearchField";
 import { Modal } from "../src/components/Modal";
 import { apiRequest } from "../src/services/api";
 
@@ -76,6 +78,14 @@ function clinicToForm(c: Clinic): ClinicForm {
     insuranceIds: c.insurances?.map((i) => i.id) ?? []
   };
 }
+
+type ClinicsPageResponse = {
+  items: Clinic[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+};
 
 function formToPayload(f: ClinicForm) {
   return {
@@ -281,6 +291,10 @@ function ClinicFormFields({
 
 export default function ClinicsPage() {
   const [clinics, setClinics] = useState<Clinic[]>([]);
+  const [listMeta, setListMeta] = useState<{ total: number; page: number; totalPages: number } | null>(null);
+  const [page, setPage] = useState(1);
+  const [searchInput, setSearchInput] = useState("");
+  const [debouncedQ, setDebouncedQ] = useState("");
   const [specialties, setSpecialties] = useState<CatalogItem[]>([]);
   const [insurances, setInsurances] = useState<CatalogItem[]>([]);
   const [createForm, setCreateForm] = useState<ClinicForm>(() => emptyForm());
@@ -289,20 +303,39 @@ export default function ClinicsPage() {
   const [editForm, setEditForm] = useState<ClinicForm>(() => emptyForm());
   const [error, setError] = useState("");
 
-  async function loadAll() {
-    const [clinicList, specList, insList] = await Promise.all([
-      apiRequest<Clinic[]>("/admin/clinics"),
+  useEffect(() => {
+    const t = window.setTimeout(() => setDebouncedQ(searchInput.trim()), 400);
+    return () => window.clearTimeout(t);
+  }, [searchInput]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [debouncedQ]);
+
+  const loadCatalogs = useCallback(async () => {
+    const [specList, insList] = await Promise.all([
       apiRequest<CatalogItem[]>("/admin/specialties"),
       apiRequest<CatalogItem[]>("/admin/insurances")
     ]);
-    setClinics(clinicList);
     setSpecialties(specList);
     setInsurances(insList);
-  }
+  }, []);
+
+  const loadClinics = useCallback(async () => {
+    const q = new URLSearchParams({ page: String(page), limit: "12" });
+    if (debouncedQ) q.set("q", debouncedQ);
+    const res = await apiRequest<ClinicsPageResponse>(`/admin/clinics?${q.toString()}`);
+    setClinics(res.items);
+    setListMeta({ total: res.total, page: res.page, totalPages: res.totalPages });
+  }, [page, debouncedQ]);
 
   useEffect(() => {
-    void loadAll().catch((e) => setError(e instanceof Error ? e.message : "Erro ao carregar."));
-  }, []);
+    void loadCatalogs().catch((e) => setError(e instanceof Error ? e.message : "Erro ao carregar."));
+  }, [loadCatalogs]);
+
+  useEffect(() => {
+    void loadClinics().catch((e) => setError(e instanceof Error ? e.message : "Erro ao carregar."));
+  }, [loadClinics]);
 
   async function createClinic(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -313,7 +346,7 @@ export default function ClinicsPage() {
         body: JSON.stringify(formToPayload(createForm))
       });
       setCreateForm(emptyForm());
-      await loadAll();
+      await loadClinics();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Falha ao criar.");
     }
@@ -335,7 +368,7 @@ export default function ClinicsPage() {
       });
       setEditOpen(false);
       setEditing(null);
-      await loadAll();
+      await loadClinics();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Falha ao salvar.");
     }
@@ -346,7 +379,7 @@ export default function ClinicsPage() {
     setError("");
     try {
       await apiRequest(`/admin/clinics/${id}`, { method: "DELETE" });
-      await loadAll();
+      await loadClinics();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Falha ao excluir.");
     }
@@ -358,6 +391,18 @@ export default function ClinicsPage() {
       description="Cadastre, edite e remova clínicas. Especialidades e convênios podem ser vinculados em lote."
     >
       {error ? <p className="oa-error">{error}</p> : null}
+
+      <div className="oa-toolbar">
+        <AdminSearchField
+          label="Buscar clínicas"
+          placeholder="Nome, cidade ou bairro…"
+          value={searchInput}
+          onChange={(v) => {
+            setSearchInput(v);
+            setError("");
+          }}
+        />
+      </div>
 
       <div className="oa-card" style={{ marginBottom: 24 }}>
         <h2 className="oa-card__title">Nova clínica</h2>
@@ -416,6 +461,19 @@ export default function ClinicsPage() {
           </tbody>
         </table>
       </div>
+
+      {listMeta ? (
+        <AdminPagination
+          page={listMeta.page}
+          totalPages={listMeta.totalPages}
+          total={listMeta.total}
+          entityLabel="clínicas"
+          onPageChange={(p) => {
+            setPage(p);
+            window.scrollTo({ top: 0, behavior: "smooth" });
+          }}
+        />
+      ) : null}
 
       <Modal
         open={editOpen}

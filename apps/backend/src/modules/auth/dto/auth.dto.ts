@@ -39,3 +39,40 @@ export class LoginDto {
   @IsNotEmpty()
   password!: string;
 }
+
+export class ForgotPasswordDto {
+  @ApiProperty()
+  @IsEmail()
+  email!: string;
+}
+
+export class ResetPasswordDto {
+  @ApiProperty({ description: "Token recebido por e-mail" })
+  @IsString()
+  @IsNotEmpty()
+  token!: string;
+
+  @ApiProperty()
+  @IsString()
+  @MinLength(8)
+  password!: string;
+}
+
+export class ChangePasswordDto {
+  @ApiProperty()
+  @IsString()
+  @IsNotEmpty()
+  currentPassword!: string;
+
+  @ApiProperty()
+  @IsString()
+  @MinLength(8)
+  newPassword!: string;
+}
+
+export class CloseAccountDto {
+  @ApiProperty({ description: "Confirmação com a senha atual" })
+  @IsString()
+  @IsNotEmpty()
+  password!: string;
+}

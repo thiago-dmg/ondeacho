@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Patch, UseGuards } from "@nestjs/common";
+import { Body, Controller, Delete, Get, Param, Patch, Query, UseGuards } from "@nestjs/common";
 import { ApiBearerAuth, ApiTags } from "@nestjs/swagger";
 import { IsIn } from "class-validator";
 import { Roles } from "../../../common/decorators/roles.decorator";
@@ -21,8 +21,13 @@ export class AdminReviewsController {
   constructor(private readonly adminReviewsService: AdminReviewsService) {}
 
   @Get()
-  list() {
-    return this.adminReviewsService.list();
+  list(
+    @Query("page") page?: string,
+    @Query("limit") limit?: string,
+    @Query("q") q?: string,
+    @Query("status") status?: string
+  ) {
+    return this.adminReviewsService.list(Number(page) || 1, Number(limit) || 20, q, status);
   }
 
   @Patch(":id/moderate")

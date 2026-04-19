@@ -28,6 +28,8 @@ import { AdminClinicSuggestionsController } from "./controllers/admin-clinic-sug
 import { AdminProfileClaimsController } from "./controllers/admin-profile-claims.controller";
 import { AdminClinicSuggestionsService } from "./services/admin-clinic-suggestions.service";
 import { AdminProfileClaimsService } from "./services/admin-profile-claims.service";
+import { AdminUsersController } from "./controllers/admin-users.controller";
+import { AdminUsersService } from "./services/admin-users.service";
 
 @Module({
   imports: [
@@ -54,9 +56,11 @@ import { AdminProfileClaimsService } from "./services/admin-profile-claims.servi
     AdminReviewsController,
     AdminMetricsController,
     AdminClinicSuggestionsController,
-    AdminProfileClaimsController
+    AdminProfileClaimsController,
+    AdminUsersController
   ],
   providers: [
+    AdminUsersService,
     AdminClinicsService,
     AdminSpecialtiesService,
     AdminInsurancesService,

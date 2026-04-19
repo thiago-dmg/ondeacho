@@ -130,6 +130,11 @@ export default function LoginPage() {
           <button type="submit" className="btn-primary" style={{ width: "100%" }} disabled={submitting}>
             {submitting ? "Aguarde…" : mode === "login" ? "Entrar" : "Cadastrar"}
           </button>
+          {mode === "login" ? (
+            <p style={{ marginTop: 14, textAlign: "center" }} className="muted">
+              <Link href="/esqueci-senha">Esqueci minha senha</Link>
+            </p>
+          ) : null}
         </form>
 
         <p style={{ marginTop: 20 }} className="muted">
