@@ -27,9 +27,17 @@
   "author": "",
   "license": "ISC",
   "private": true,
+  "devDependencies": {
+    "@types/passport-jwt": "4.0.1",
+    "@types/pg": "8.20.0",
+    "typescript": "5.4.5"
+  },
   "workspaces": [
     "apps/backend",
     "apps/admin",
     "apps/web"
-  ]
+  ],
+  "overrides": {
+    "typescript": "5.4.5"
+  }
 }

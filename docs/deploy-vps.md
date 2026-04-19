@@ -57,6 +57,7 @@ O arquivo `apps/backend/src/database/import/clinicas-novas.json` contém dezenas
 
 - **`cd /var/www/ondeacho-admin`**: essa pasta **não é criada** pelo workflow atual (o deploy é só da API em **`/var/www/ondeacho-api`**). O painel admin Next pode nem estar na VPS.
 - **`Could not read package.json` em `/root`**: o `npm run` foi executado na home do root **fora** da pasta do projeto. O comando tem de rodar na **raiz do clone** do repositório (onde está o `package.json` do monorepo).
+- **`NODE_ENV=production` antes de `npm ci`**: o npm **omite `devDependencies`** (TypeScript, `@types/pg`, etc.). O `npm run build --workspace apps/backend` pode invocar um **`tsc` global** (ex. TypeScript 6) e falhar com TS5011 / TS5101 / TS5107, ou faltar `dist/database/migrate.js` ao correr `db:migrate`. Solução: `unset NODE_ENV` (ou outra sessão) e `npm ci`, ou **`npm ci --include=dev`** na raiz do monorepo.
 
 **Procedimento recomendado na VPS**
 
@@ -73,7 +74,7 @@ O arquivo `apps/backend/src/database/import/clinicas-novas.json` contém dezenas
 2. Instalar dependências na raiz (necessário para `npm run db:import-clinicas` usar o workspace `apps/backend`):
 
    ```bash
-   npm ci
+   npm ci --include=dev
    ```
 
 3. Exportar as variáveis do **mesmo** Postgres que a API usa (veja `/etc/ondeacho-api.env` ou o que você configurou) e rodar **na raiz do clone**:

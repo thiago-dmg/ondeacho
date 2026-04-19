@@ -65,7 +65,9 @@ jobs:
           cache: "npm"
 
       - name: Install dependencies
-        run: npm ci
+        # --include=dev: com NODE_ENV=production o npm omite devDependencies (tsc, @types/*);
+        # sem isso o build do backend pode usar um tsc global (ex. TS 6) e falhar.
+        run: npm ci --include=dev
 
       - name: Lint backend
         run: npm run lint:backend
@@ -108,7 +110,7 @@ jobs:
           cache: "npm"
 
       - name: Install dependencies
-        run: npm ci
+        run: npm ci --include=dev
 
       - name: Build backend
         run: npm run build --workspace apps/backend
@@ -257,7 +259,7 @@ jobs:
           cache: "npm"
 
       - name: Install dependencies
-        run: npm ci
+        run: npm ci --include=dev
 
       - name: Build admin
         env:
@@ -414,7 +416,7 @@ jobs:
           cache: "npm"
 
       - name: Install dependencies
-        run: npm ci
+        run: npm ci --include=dev
 
       - name: Build site (apps/web)
         env:

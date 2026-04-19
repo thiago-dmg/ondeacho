@@ -20,12 +20,19 @@ Mais contexto de DNS, CORS e exemplo Nginx (site + **api** + admin): [ambiente-o
 
 ## Build de produção (na VPS ou na tua máquina antes de enviar o pacote)
 
-Na **raiz do monorepo** (com `npm ci` ou `npm install` já feito):
+Na **raiz do monorepo**, instala dependências **antes** de exportar `NODE_ENV=production` para o build do Next:
 
 ```bash
+# Se já exportaste NODE_ENV=production na mesma sessão, o npm omite devDependencies
+# (typescript, @types/pg, …) e o backend pode usar um tsc global errado. Usa:
+npm ci --include=dev
+# ou: unset NODE_ENV && npm ci
+
 export NODE_ENV=production
 npm run build --workspace apps/web
 ```
+
+Para compilar o **backend** ou correr **`npm run db:migrate`** no mesmo clone, também precisas de `devDependencies` instaladas (ou `npm ci --include=dev` como acima).
 
 O **`apps/web/.env.production`** define `NEXT_PUBLIC_API_URL=/api/v1` (mesma origem + rewrites no `next.config.js`).
 
@@ -39,7 +46,7 @@ Em Linux na VPS o output fica em `apps/web/.next-build`. No Windows o projeto po
 ## Primeira vez na VPS (manual, estilo admin)
 
 1. Clona o repo (ou copia o artefacto de CI) para um diretório de trabalho.
-2. Instala dependências na raiz: `npm ci`.
+2. Instala dependências na raiz: `npm ci --include=dev` (recomendado se `NODE_ENV=production` estiver definido no shell; caso contrário `npm ci` basta).
 3. Corre `npm run build --workspace apps/web` (ou exporta variáveis se quiseres URL absoluta da API).
 4. Copia para um destino fixo, por exemplo:
   ```text
