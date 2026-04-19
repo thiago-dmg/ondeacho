@@ -95,9 +95,13 @@ Redirecionamento **www → apex** (ou o contrário) podes fazer com um `server` 
 
 Não abras a **3002** à internet se usares Nginx: só **80/443** públicos; a 3002 fica em localhost.
 
-## GitHub Actions (opcional)
+## GitHub Actions
 
-O workflow `[.github/workflows/ci-deploy.yml](../.github/workflows/ci-deploy.yml)` já faz deploy da **API** e do **admin**. Para automatizar o site da mesma forma, seria preciso um job `deploy-web` espelhado ao `deploy-admin` (artefacto `apps/web/.next-build`, serviço `ondeacho-web`, pasta `/var/www/ondeacho-web`). Até lá, o deploy manual deste doc é suficiente.
+O workflow `[.github/workflows/ci-deploy.yml](../.github/workflows/ci-deploy.yml)` inclui o job **`deploy-web`**: em push para `main`/`master` com alterações em `apps/web/**` (ou no próprio workflow), faz build, envia para `/var/www/ondeacho-web` e reinicia o serviço **`ondeacho-web`** na porta **3002**. Em **Run workflow** (manual), o site também é publicado (útil para primeira instalação ou rebuild sem mudar ficheiros sob o filtro de paths).
+
+**Requisito na VPS:** o serviço `ondeacho-web` e Nginx a `proxy_pass` para `127.0.0.1:3002` têm de existir (primeira vez: secção “Primeira vez na VPS” acima). Sem isso, o job falha no `curl` local após o restart.
+
+Se o login em produção **não mostra** links que já existem no código (ex.: «Esqueci minha senha»), quase sempre é **build antigo a servir**: confirma `sudo systemctl status ondeacho-web`, faz push que toque em `apps/web/` ou dispara o workflow manualmente, e verifica em Actions se `deploy-web` concluiu.
 
 ## Comandos úteis
 

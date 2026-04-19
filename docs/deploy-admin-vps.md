@@ -1,42 +1,34 @@
 # Deploy do admin na VPS (GitHub Actions)
 
-O job **deploy-admin** do workflow único `.github/workflows/ci-deploy.yml` publica o Next.js em `/var/www/ondeacho-admin` e sobe o serviço systemd `ondeacho-admin` na porta **3001** (localhost). Esse job só corre em `main`/`master` quando há alterações em `apps/admin/**` ou no próprio `ci-deploy.yml` (ou em execução manual *workflow_dispatch*).
+O job **deploy-admin** do workflow único `.github/workflows/ci-deploy.yml` publica o Next.js em `/var/www/ondeacho-admin` e sobe o serviço systemd `ondeacho-admin` na porta **3001** (localhost). Esse job só corre em `main`/`master` quando há alterações em `apps/admin/`** ou no próprio `ci-deploy.yml` (ou em execução manual *workflow_dispatch*).
 
 ## O que configurar no GitHub (uma vez)
 
 1. **Secrets** (já usados pelo deploy da API): `VPS_SSH_HOST`, `VPS_SSH_USER`, `VPS_SSH_KEY`.
-
-2. **`NEXT_PUBLIC_API_URL`** — o **`apps/admin/.env.production`** versionado usa **`/api/v1`**: o browser chama **`https://admin.ondeachotea.com/api/v1/...`** e o Next faz *rewrite* para o Nest (`ADMIN_API_PROXY_TARGET`, default `http://127.0.0.1:3000`). **Não depende** de DNS para `api.ondeachotea.com`.
-
-   Se no GitHub Actions definiste o secret **`NEXT_PUBLIC_API_URL`** com `https://api.ondeachotea.com/...`, isso **sobrescreve** o `.env.production` no build — ou remove o secret, ou define-o para **`/api/v1`**, senão o login volta a falhar sem DNS `api`.
-
+2. `**NEXT_PUBLIC_API_URL*`* — o `**apps/admin/.env.production`** versionado usa `**/api/v1**`: o browser chama `**https://admin.ondeachotea.com/api/v1/...**` e o Next faz *rewrite* para o Nest (`ADMIN_API_PROXY_TARGET`, default `http://127.0.0.1:3000`). **Não depende** de DNS para `api.ondeachotea.com`.
+  Se no GitHub Actions definiste o secret `**NEXT_PUBLIC_API_URL`** com `https://api.ondeachotea.com/...`, isso **sobrescreve** o `.env.production` no build — ou remove o secret, ou define-o para `**/api/v1`**, senão o login volta a falhar sem DNS `api`.
    Para usar só o subdomínio `api` (URL absoluta), garante DNS + TLS e CORS no Nest para `https://admin.ondeachotea.com`.
 
 ## Login admin em produção
 
-- Utilizador de exemplo no seed: **`admin@ondeacho.app`**, senha **`Admin@123`** (comentário em `apps/backend/src/database/seed.sql`).
+- Utilizador de exemplo no seed: `**admin@ondeacho.app*`*, senha `**Admin@123**` (comentário em `apps/backend/src/database/seed.sql`).
 - Se aparecer **“Credenciais inválidas”**, a API está a responder mas o utilizador não existe ou a senha não coincide — na VPS rode o seed (ou crie o user na base):
-
-  `npm run db:seed --workspace apps/backend` (com env da base; ex.: `set -a && source /etc/ondeacho-api.env && set -a`). O `db:migrate` / `db:seed` em produção usam `node dist/...` — é preciso **build do backend** no artefacto (o deploy da API já inclui isso).
+`npm run db:seed --workspace apps/backend` (com env da base; ex.: `set -a && source /etc/ondeacho-api.env && set -a`). O `db:migrate` / `db:seed` em produção usam `node dist/...` — é preciso **build do backend** no artefacto (o deploy da API já inclui isso).
 
 ## HTTPS (“Não seguro”)
 
-- Aviso **“Não seguro”** é normal em **`http://IP:3001`** — não há certificado.
+- Aviso **“Não seguro”** é normal em `**http://IP:3001`** — não há certificado.
 - Para HTTPS, use **domínio + Nginx + Let’s Encrypt** (ou Cloudflare) na **443** com proxy para `http://127.0.0.1:3001`.
 
 ## O que fazer na VPS (primeira vez)
 
 1. **Node** já é necessário para a API; o admin usa o mesmo `node` em `/usr/bin/node` (Ubuntu/Debian padrão).
-
 2. **Diretório** — o primeiro deploy cria `/var/www/ondeacho-admin/releases/...` e o symlink `current`. Nada precisa ser criado à mão.
-
 3. **Firewall** — por padrão só **localhost:3001** escuta. Para acessar de fora:
-   - **Recomendado:** Nginx (ou Caddy) na frente com HTTPS e `proxy_pass http://127.0.0.1:3001`.
-   - **Não recomendado:** abrir a porta 3001 no firewall só para teste.
-
+  - **Recomendado:** Nginx (ou Caddy) na frente com HTTPS e `proxy_pass http://127.0.0.1:3001`.
+  - **Não recomendado:** abrir a porta 3001 no firewall só para teste.
 4. **CORS** — se o admin for servido em outro domínio que a API, o backend precisa aceitar a origem do painel (headers CORS). Ajuste no NestJS se o browser bloquear chamadas.
-
-5. **Disparar o deploy** — faça push em `main` alterando `apps/admin/**` ou use **Actions → Deploy Admin to VPS → Run workflow**.
+5. **Disparar o deploy** — faça push em `main` alterando `apps/admin/`** ou use **Actions → Deploy Admin to VPS → Run workflow**.
 
 ## Acesso pelo IP (porta 3001)
 
@@ -51,11 +43,11 @@ São **configurações separadas**: o bloco Nginx do site **não** ativa o admin
 1. **DNS** — registo **A** `admin` → mesmo IP da VPS. Teste: `dig +short admin.ondeachotea.com A`.
 2. **Serviço** — `curl -sI http://127.0.0.1:3001/` na VPS tem de ser **200**; senão: `sudo systemctl status ondeacho-admin`.
 3. **Nginx** — ficheiro com `server_name admin.ondeachotea.com` e `proxy_pass http://127.0.0.1:3001`, com symlink em `sites-enabled`; `sudo nginx -t && sudo systemctl reload nginx`.
-4. **Certificado TLS** para **`admin.ondeachotea.com`** (ex.: `certbot --nginx -d admin.ondeachotea.com`). O cert do site **não** cobre o subdomínio `admin` por defeito.
+4. **Certificado TLS** para `**admin.ondeachotea.com`** (ex.: `certbot --nginx -d admin.ondeachotea.com`). O cert do site **não** cobre o subdomínio `admin` por defeito.
 
 ## Nginx (exemplo — `admin.ondeachotea.com`)
 
-Use o mesmo IP da VPS; certificado TLS para o host `admin`. Exemplo alinhado ao site e à API: [`nginx-ondeachotea-exemplo.conf`](./nginx-ondeachotea-exemplo.conf).
+Use o mesmo IP da VPS; certificado TLS para o host `admin`. Exemplo alinhado ao site e à API: `[nginx-ondeachotea-exemplo.conf](./nginx-ondeachotea-exemplo.conf)`.
 
 ```nginx
 server {
@@ -83,3 +75,4 @@ sudo systemctl status ondeacho-admin
 sudo journalctl -u ondeacho-admin -f
 curl -sI http://127.0.0.1:3001/
 ```
+
