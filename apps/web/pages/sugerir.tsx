@@ -44,6 +44,12 @@ export default function SugerirPage() {
   const linkedClinicOtherOn = linkedClinicValue === OTHER;
 
   useEffect(() => {
+    if (targetType === "profissional" && linkedClinicValue !== OTHER) {
+      setAddressLine("");
+    }
+  }, [targetType, linkedClinicValue]);
+
+  useEffect(() => {
     let cancelled = false;
     void (async () => {
       setCatalogLoading(true);
@@ -121,12 +127,15 @@ export default function SugerirPage() {
       const specialtyIds = selectedSpecialtyIds.filter((id) => id !== OTHER);
       const insuranceIds = selectedInsuranceIds.filter((id) => id !== OTHER);
 
+      const includeAddress =
+        targetType === "clinica" || (targetType === "profissional" && linkedClinicOtherOn);
+
       const body: Record<string, unknown> = {
         targetType,
         name: name.trim(),
         city: city.trim(),
         neighborhood: neighborhood.trim() || undefined,
-        addressLine: addressLine.trim() || undefined,
+        addressLine: includeAddress && addressLine.trim() ? addressLine.trim() : undefined,
         phone: phone.trim() || undefined,
         whatsappPhone: whatsappPhone.trim() || undefined,
         specialtyIds,
@@ -400,17 +409,23 @@ export default function SugerirPage() {
               <input className="input" value={neighborhood} onChange={(e) => setNeighborhood(e.target.value)} />
             </label>
 
-            <label style={{ display: "block", marginBottom: 16 }}>
-              <span className="muted" style={{ display: "block", marginBottom: 6, fontSize: 13 }}>
-                Endereço (opcional)
-              </span>
-              <input
-                className="input"
-                value={addressLine}
-                onChange={(e) => setAddressLine(e.target.value)}
-                placeholder="Rua e número — útil para clínica ou consultório conhecido"
-              />
-            </label>
+            {(targetType === "clinica" || linkedClinicOtherOn) && (
+              <label style={{ display: "block", marginBottom: 16 }}>
+                <span className="muted" style={{ display: "block", marginBottom: 6, fontSize: 13 }}>
+                  {targetType === "clinica" ? "Endereço (opcional)" : "Endereço da nova clínica (opcional)"}
+                </span>
+                <input
+                  className="input"
+                  value={addressLine}
+                  onChange={(e) => setAddressLine(e.target.value)}
+                  placeholder={
+                    targetType === "clinica"
+                      ? "Rua e número — ajuda no mapa e na busca"
+                      : "Rua e número da clínica indicada em «Outros»"
+                  }
+                />
+              </label>
+            )}
 
             <label style={{ display: "block", marginBottom: 16 }}>
               <span className="muted" style={{ display: "block", marginBottom: 6, fontSize: 13 }}>

@@ -1,6 +1,7 @@
 import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { In, Repository } from "typeorm";
+import { randomBytes } from "crypto";
 import { Role } from "../../../common/enums/role.enum";
 import { InsuranceEntity } from "../../catalog/entities/insurance.entity";
 import { SpecialtyEntity } from "../../catalog/entities/specialty.entity";
@@ -13,6 +14,27 @@ import { ReviewStatus } from "../../collaboration/enums/review-status.enum";
 import { SuggestionTargetType } from "../../collaboration/enums/suggestion-target-type.enum";
 import { ApproveClinicSuggestionDto } from "../dto/approve-clinic-suggestion.dto";
 import { ReviewRequestDto } from "../../collaboration/dto/review-request.dto";
+
+function splitCommaList(value: string | null | undefined): string[] {
+  if (!value?.trim()) {
+    return [];
+  }
+  return value
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+}
+
+function slugBase(label: string): string {
+  const ascii = label
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 50);
+  return ascii || "item";
+}
 
 @Injectable()
 export class AdminClinicSuggestionsService {
@@ -59,10 +81,163 @@ export class AdminClinicSuggestionsService {
     );
   }
 
-  /**
-   * Resolve a clínica final para um profissional sugerido.
-   * Ordem: override do admin → criar rascunho → vínculo já escolhido na sugestão.
-   */
+  private async uniqueSpecialtySlug(base: string, maxLen: number): Promise<string> {
+    let slug = base.slice(0, maxLen);
+    for (let attempt = 0; attempt < 40; attempt += 1) {
+      const hit = await this.specialtiesRepository.findOne({ where: { slug } });
+      if (!hit) return slug;
+      const suffix = `-${randomBytes(3).toString("hex")}`;
+      slug = `${base.slice(0, Math.max(1, maxLen - suffix.length))}${suffix}`.slice(0, maxLen);
+    }
+    return `${base.slice(0, 40)}-${randomBytes(4).toString("hex")}`.slice(0, maxLen);
+  }
+
+  private async uniqueInsuranceSlug(base: string, maxLen: number): Promise<string> {
+    let slug = base.slice(0, maxLen);
+    for (let attempt = 0; attempt < 40; attempt += 1) {
+      const hit = await this.insurancesRepository.findOne({ where: { slug } });
+      if (!hit) return slug;
+      const suffix = `-${randomBytes(3).toString("hex")}`;
+      slug = `${base.slice(0, Math.max(1, maxLen - suffix.length))}${suffix}`.slice(0, maxLen);
+    }
+    return `${base.slice(0, 40)}-${randomBytes(4).toString("hex")}`.slice(0, maxLen);
+  }
+
+  private async findOrCreateSpecialtyByName(rawName: string): Promise<SpecialtyEntity> {
+    const name = rawName.trim();
+    if (!name) {
+      throw new BadRequestException("Nome de especialidade vazio.");
+    }
+    const existing = await this.specialtiesRepository
+      .createQueryBuilder("s")
+      .where("LOWER(s.name) = LOWER(:n)", { n: name })
+      .getOne();
+    if (existing) {
+      return existing;
+    }
+    const base = slugBase(name);
+    const slug = await this.uniqueSpecialtySlug(base, 60);
+    return this.specialtiesRepository.save(
+      this.specialtiesRepository.create({
+        slug,
+        name: name.length > 120 ? name.slice(0, 120) : name
+      })
+    );
+  }
+
+  private async findOrCreateInsuranceByName(rawName: string): Promise<InsuranceEntity> {
+    const name = rawName.trim();
+    if (!name) {
+      throw new BadRequestException("Nome de convênio vazio.");
+    }
+    const existing = await this.insurancesRepository
+      .createQueryBuilder("i")
+      .where("LOWER(i.name) = LOWER(:n)", { n: name })
+      .getOne();
+    if (existing) {
+      return existing;
+    }
+    const base = slugBase(name);
+    const slug = await this.uniqueInsuranceSlug(base, 60);
+    return this.insurancesRepository.save(
+      this.insurancesRepository.create({
+        slug: slug as string,
+        name: name.length > 120 ? name.slice(0, 120) : name
+      })
+    );
+  }
+
+  /** IDs finais (catálogo existente + criados a partir de «Outros»). */
+  private async collectSpecialtyIdsFromSuggestion(suggestion: ClinicSuggestionEntity): Promise<string[]> {
+    const ids = new Set<string>();
+    if (suggestion.specialtyIds?.length) {
+      const found = await this.specialtiesRepository.findBy({ id: In(suggestion.specialtyIds) });
+      if (found.length !== suggestion.specialtyIds.length) {
+        throw new BadRequestException("Uma ou mais especialidades da sugestão são inválidas.");
+      }
+      for (const s of found) {
+        ids.add(s.id);
+      }
+    }
+    for (const piece of splitCommaList(suggestion.specialtyOther)) {
+      const ent = await this.findOrCreateSpecialtyByName(piece);
+      ids.add(ent.id);
+    }
+    return [...ids];
+  }
+
+  private async collectInsuranceIdsFromSuggestion(suggestion: ClinicSuggestionEntity): Promise<string[]> {
+    const ids = new Set<string>();
+    if (suggestion.insuranceIds?.length) {
+      const found = await this.insurancesRepository.findBy({ id: In(suggestion.insuranceIds) });
+      if (found.length !== suggestion.insuranceIds.length) {
+        throw new BadRequestException("Um ou mais convênios da sugestão são inválidos.");
+      }
+      for (const i of found) {
+        ids.add(i.id);
+      }
+    }
+    for (const piece of splitCommaList(suggestion.insuranceOther)) {
+      const ent = await this.findOrCreateInsuranceByName(piece);
+      ids.add(ent.id);
+    }
+    return [...ids];
+  }
+
+  private async mergeClinicCatalog(clinicId: string, specialtyIds: string[], insuranceIds: string[]) {
+    const clinic = await this.clinicsRepository.findOne({
+      where: { id: clinicId },
+      relations: { specialties: true, insurances: true }
+    });
+    if (!clinic) {
+      throw new BadRequestException("Clínica alvo não encontrada para associar especialidades/convênios.");
+    }
+    const specMap = new Map((clinic.specialties ?? []).map((s) => [s.id, s]));
+    for (const id of [...new Set(specialtyIds)]) {
+      if (!specMap.has(id)) {
+        const row = await this.specialtiesRepository.findOneBy({ id });
+        if (row) specMap.set(id, row);
+      }
+    }
+    const insMap = new Map((clinic.insurances ?? []).map((i) => [i.id, i]));
+    for (const id of [...new Set(insuranceIds)]) {
+      if (!insMap.has(id)) {
+        const row = await this.insurancesRepository.findOneBy({ id });
+        if (row) insMap.set(id, row);
+      }
+    }
+    clinic.specialties = [...specMap.values()];
+    clinic.insurances = [...insMap.values()];
+    await this.clinicsRepository.save(clinic);
+  }
+
+  private async mergeProfessionalCatalog(professionalId: string, specialtyIds: string[], insuranceIds: string[]) {
+    const pro = await this.professionalsRepository.findOne({
+      where: { id: professionalId },
+      relations: { specialties: true, insurances: true }
+    });
+    if (!pro) {
+      throw new BadRequestException("Profissional não encontrado para associar especialidades/convênios.");
+    }
+    const specMap = new Map((pro.specialties ?? []).map((s) => [s.id, s]));
+    for (const id of [...new Set(specialtyIds)]) {
+      if (!specMap.has(id)) {
+        const row = await this.specialtiesRepository.findOneBy({ id });
+        if (row) specMap.set(id, row);
+      }
+    }
+    const insMap = new Map((pro.insurances ?? []).map((i) => [i.id, i]));
+    for (const id of [...new Set(insuranceIds)]) {
+      if (!insMap.has(id)) {
+        const row = await this.insurancesRepository.findOneBy({ id });
+        if (row) insMap.set(id, row);
+      }
+    }
+    pro.specialties = [...specMap.values()];
+    pro.insurances = [...insMap.values()];
+    await this.professionalsRepository.save(pro);
+  }
+
   private async resolveClinicIdForProfessional(
     suggestion: ClinicSuggestionEntity,
     dto: ApproveClinicSuggestionDto
@@ -111,32 +286,29 @@ export class AdminClinicSuggestionsService {
         );
       }
 
-      const specs = suggestion.specialtyIds?.length
-        ? await this.specialtiesRepository.findBy({ id: In(suggestion.specialtyIds) })
-        : [];
-      const ins = suggestion.insuranceIds?.length
-        ? await this.insurancesRepository.findBy({ id: In(suggestion.insuranceIds) })
-        : [];
+      const clinic = await this.clinicsRepository.save(
+        this.clinicsRepository.create({
+          name: draftName,
+          city: draftCity,
+          neighborhood: suggestion.neighborhood,
+          addressLine: suggestion.addressLine,
+          phone: suggestion.phone,
+          whatsappPhone: suggestion.whatsappPhone,
+          description: suggestion.observations,
+          rating: 0,
+          acceptsOnline: false,
+          supportsTeaTdh: true,
+          addedByCommunity: true,
+          isClaimed: false,
+          isVerified: false
+        })
+      );
 
-      const clinic = this.clinicsRepository.create({
-        name: draftName,
-        city: draftCity,
-        neighborhood: suggestion.neighborhood,
-        addressLine: suggestion.addressLine,
-        phone: suggestion.phone,
-        whatsappPhone: suggestion.whatsappPhone,
-        description: suggestion.observations,
-        rating: 0,
-        acceptsOnline: false,
-        supportsTeaTdh: true,
-        addedByCommunity: true,
-        isClaimed: false,
-        isVerified: false,
-        specialties: specs,
-        insurances: ins
-      });
-      const saved = await this.clinicsRepository.save(clinic);
-      return { clinicId: saved.id, createdNewClinic: true };
+      const specIds = await this.collectSpecialtyIdsFromSuggestion(suggestion);
+      const insIds = await this.collectInsuranceIdsFromSuggestion(suggestion);
+      await this.mergeClinicCatalog(clinic.id, specIds, insIds);
+
+      return { clinicId: clinic.id, createdNewClinic: true };
     }
 
     if (suggestion.linkedClinicId) {
@@ -146,21 +318,6 @@ export class AdminClinicSuggestionsService {
     throw new BadRequestException(
       "Profissional sem clínica válida na sugestão: envie `professionalClinicId` (clínica existente) ou `createNewClinicFromDraft: true` (criar clínica a partir do rascunho / «Outros»)."
     );
-  }
-
-  private async attachProfessionalCatalog(
-    professional: ProfessionalEntity,
-    suggestion: ClinicSuggestionEntity
-  ) {
-    const specs = suggestion.specialtyIds?.length
-      ? await this.specialtiesRepository.findBy({ id: In(suggestion.specialtyIds) })
-      : [];
-    const ins = suggestion.insuranceIds?.length
-      ? await this.insurancesRepository.findBy({ id: In(suggestion.insuranceIds) })
-      : [];
-    professional.specialties = specs;
-    professional.insurances = ins;
-    await this.professionalsRepository.save(professional);
   }
 
   async approve(id: string, adminUserId: string, dto: ApproveClinicSuggestionDto) {
@@ -211,6 +368,10 @@ export class AdminClinicSuggestionsService {
         })
       );
 
+      const specIds = await this.collectSpecialtyIdsFromSuggestion(suggestion);
+      const insIds = await this.collectInsuranceIdsFromSuggestion(suggestion);
+      await this.mergeClinicCatalog(clinic.id, specIds, insIds);
+
       suggestion.approvedClinicId = clinic.id;
     } else {
       const duplicate = await this.professionalsRepository
@@ -243,7 +404,10 @@ export class AdminClinicSuggestionsService {
         })
       );
 
-      await this.attachProfessionalCatalog(professional, suggestion);
+      const specIds = await this.collectSpecialtyIdsFromSuggestion(suggestion);
+      const insIds = await this.collectInsuranceIdsFromSuggestion(suggestion);
+      await this.mergeProfessionalCatalog(professional.id, specIds, insIds);
+      await this.mergeClinicCatalog(clinicId, specIds, insIds);
 
       suggestion.approvedProfessionalId = professional.id;
       suggestion.approvedClinicId = clinicId;
