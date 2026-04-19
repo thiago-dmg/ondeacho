@@ -22,7 +22,9 @@ export default function EsqueciSenhaPage() {
       /* mesma mensagem */
     } finally {
       setLoading(false);
-      setMsg("Se existir uma conta com este e-mail, enviámos um link para redefinir a senha.");
+      setMsg(
+        "Se existir uma conta com este e-mail, enviámos um link para redefinir a senha. Abra o e-mail, defina a nova senha na página que abrir e depois volte ao aplicativo ou à web para entrar."
+      );
     }
   }
 

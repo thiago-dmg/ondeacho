@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
-import { In, Repository } from "typeorm";
+import { In, Repository, SelectQueryBuilder } from "typeorm";
 import { InsuranceEntity } from "../../catalog/entities/insurance.entity";
 import { SpecialtyEntity } from "../../catalog/entities/specialty.entity";
 import { ClinicEntity } from "../../listings/entities/clinic.entity";
@@ -8,6 +8,23 @@ import { aggregateApprovedReviewsByClinicIds } from "../../reviews/approved-revi
 import { computeAppRating } from "../../reviews/review-summary.util";
 import { ReviewEntity } from "../../reviews/entities/review.entity";
 import { UpsertClinicDto } from "../dto/upsert-clinic.dto";
+
+const PAGE_SIZES = [10, 25, 50, 100] as const;
+
+function normalizeLimit(raw: number): number {
+  if (PAGE_SIZES.includes(raw as (typeof PAGE_SIZES)[number])) {
+    return raw;
+  }
+  return 25;
+}
+
+function parseOptionalFloat(v?: string): number | undefined {
+  if (v === undefined || v === null || String(v).trim() === "") {
+    return undefined;
+  }
+  const n = Number(v);
+  return Number.isFinite(n) ? n : undefined;
+}
 
 @Injectable()
 export class AdminClinicsService {
@@ -22,10 +39,12 @@ export class AdminClinicsService {
     private readonly reviewsRepository: Repository<ReviewEntity>
   ) {}
 
-  async list(pageRaw = 1, limitRaw = 20, q?: string) {
-    const page = Math.max(1, pageRaw || 1);
-    const limit = Math.min(100, Math.max(1, limitRaw || 20));
-    const qb = this.clinicsRepository.createQueryBuilder("c").orderBy("c.createdAt", "DESC");
+  private applyListFilters(
+    qb: SelectQueryBuilder<ClinicEntity>,
+    q?: string,
+    minCommunityRating?: number,
+    maxCommunityRating?: number
+  ) {
     const term = q?.trim().toLowerCase();
     if (term) {
       qb.andWhere(
@@ -33,6 +52,41 @@ export class AdminClinicsService {
         { t: `%${term}%` }
       );
     }
+    if (minCommunityRating !== undefined) {
+      qb.andWhere(
+        `(SELECT COUNT(*)::int FROM reviews r WHERE r.clinic_id = c.id AND r.status = 'approved') > 0`
+      );
+      qb.andWhere(
+        `(SELECT AVG(r.rating::float) FROM reviews r WHERE r.clinic_id = c.id AND r.status = 'approved') >= :minComm`,
+        { minComm: minCommunityRating }
+      );
+    }
+    if (maxCommunityRating !== undefined) {
+      qb.andWhere(
+        `(SELECT COUNT(*)::int FROM reviews r WHERE r.clinic_id = c.id AND r.status = 'approved') > 0`
+      );
+      qb.andWhere(
+        `(SELECT AVG(r.rating::float) FROM reviews r WHERE r.clinic_id = c.id AND r.status = 'approved') <= :maxComm`,
+        { maxComm: maxCommunityRating }
+      );
+    }
+  }
+
+  async list(
+    pageRaw = 1,
+    limitRaw = 25,
+    q?: string,
+    minCommunityRatingRaw?: string,
+    maxCommunityRatingRaw?: string
+  ) {
+    const page = Math.max(1, pageRaw || 1);
+    const limit = normalizeLimit(Number(limitRaw) || 25);
+    const minCommunityRating = parseOptionalFloat(minCommunityRatingRaw);
+    const maxCommunityRating = parseOptionalFloat(maxCommunityRatingRaw);
+
+    const qb = this.clinicsRepository.createQueryBuilder("c").orderBy("c.createdAt", "DESC");
+    this.applyListFilters(qb, q, minCommunityRating, maxCommunityRating);
+
     const total = await qb.clone().getCount();
     const clinics = await qb
       .leftJoinAndSelect("c.specialties", "s")

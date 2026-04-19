@@ -12,6 +12,15 @@ import { Role } from "../../../common/enums/role.enum";
 import { UserEntity } from "../../users/entities/user.entity";
 import { AdminUpdateUserDto } from "../dto/admin-user.dto";
 
+const PAGE_SIZES = [10, 25, 50, 100] as const;
+
+function normalizeLimit(raw: number): number {
+  if (PAGE_SIZES.includes(raw as (typeof PAGE_SIZES)[number])) {
+    return raw;
+  }
+  return 25;
+}
+
 export type PaginatedUsers = {
   items: { id: string; name: string; email: string; role: Role; createdAt: Date }[];
   total: number;
@@ -29,7 +38,7 @@ export class AdminUsersService {
 
   async list(pageRaw: number, limitRaw: number, q?: string): Promise<PaginatedUsers> {
     const page = Math.max(1, pageRaw || 1);
-    const limit = Math.min(100, Math.max(1, limitRaw || 20));
+    const limit = normalizeLimit(Number(limitRaw) || 25);
     const qb = this.usersRepository.createQueryBuilder("u").orderBy("u.createdAt", "DESC");
     const term = q?.trim().toLowerCase();
     if (term) {

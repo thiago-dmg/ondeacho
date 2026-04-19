@@ -72,11 +72,12 @@ export default function RedefinirSenhaPage() {
           {ok ? (
             <>
               <h1 style={{ fontSize: 26, margin: "0 0 12px", color: "#0f766e" }}>Senha atualizada</h1>
-              <p className="muted" style={{ lineHeight: 1.55 }}>
-                Já pode entrar com a nova senha na web ou na app.
+              <p className="muted" style={{ lineHeight: 1.65, marginBottom: 16 }}>
+                A sua conta já está com a nova senha. <strong>Volte ao aplicativo OndeAcho</strong> no celular e faça login
+                normalmente — ou use o site abaixo.
               </p>
-              <Link href="/login" className="btn-primary" style={{ display: "inline-block", marginTop: 22, textDecoration: "none" }}>
-                Ir para o login
+              <Link href="/login" className="btn-primary" style={{ display: "inline-block", marginTop: 8, textDecoration: "none" }}>
+                Entrar na web
               </Link>
             </>
           ) : (

@@ -1,10 +1,27 @@
 import { Injectable, NotFoundException } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
-import { In, Repository } from "typeorm";
+import { In, Repository, SelectQueryBuilder } from "typeorm";
 import { InsuranceEntity } from "../../catalog/entities/insurance.entity";
 import { SpecialtyEntity } from "../../catalog/entities/specialty.entity";
 import { ProfessionalEntity } from "../../professionals/entities/professional.entity";
 import { UpsertProfessionalDto } from "../dto/upsert-professional.dto";
+
+const PAGE_SIZES = [10, 25, 50, 100] as const;
+
+function normalizeLimit(raw: number): number {
+  if (PAGE_SIZES.includes(raw as (typeof PAGE_SIZES)[number])) {
+    return raw;
+  }
+  return 25;
+}
+
+function parseOptionalFloat(v?: string): number | undefined {
+  if (v === undefined || v === null || String(v).trim() === "") {
+    return undefined;
+  }
+  const n = Number(v);
+  return Number.isFinite(n) ? n : undefined;
+}
 
 @Injectable()
 export class AdminProfessionalsService {
@@ -17,11 +34,67 @@ export class AdminProfessionalsService {
     private readonly insurancesRepository: Repository<InsuranceEntity>
   ) {}
 
-  list() {
-    return this.professionalsRepository.find({
-      relations: { specialties: true, insurances: true, clinic: true },
-      order: { createdAt: "DESC" }
-    });
+  /** `clinicAlias` = alias já ligado com `p.clinic` (ex.: `clinic`). */
+  private addProfListPredicates(
+    qb: SelectQueryBuilder<ProfessionalEntity>,
+    clinicAlias: string,
+    q?: string,
+    minRating?: number,
+    maxRating?: number
+  ) {
+    const term = q?.trim().toLowerCase();
+    if (term) {
+      qb.andWhere(
+        `(LOWER(p.name) LIKE :t OR LOWER(p.city) LIKE :t OR LOWER(COALESCE(p.neighborhood, '')) LIKE :t OR LOWER(COALESCE(${clinicAlias}.name, '')) LIKE :t)`,
+        { t: `%${term}%` }
+      );
+    }
+    if (minRating !== undefined) {
+      qb.andWhere("p.rating >= :minR", { minR: minRating });
+    }
+    if (maxRating !== undefined) {
+      qb.andWhere("p.rating <= :maxR", { maxR: maxRating });
+    }
+  }
+
+  async list(
+    pageRaw = 1,
+    limitRaw = 25,
+    q?: string,
+    minRatingRaw?: string,
+    maxRatingRaw?: string
+  ) {
+    const page = Math.max(1, pageRaw || 1);
+    const limit = normalizeLimit(Number(limitRaw) || 25);
+    const minRating = parseOptionalFloat(minRatingRaw);
+    const maxRating = parseOptionalFloat(maxRatingRaw);
+
+    const countQb = this.professionalsRepository
+      .createQueryBuilder("p")
+      .leftJoin("p.clinic", "clinic")
+      .orderBy("p.createdAt", "DESC");
+    this.addProfListPredicates(countQb, "clinic", q, minRating, maxRating);
+    const total = await countQb.getCount();
+
+    const dataQb = this.professionalsRepository
+      .createQueryBuilder("p")
+      .leftJoinAndSelect("p.specialties", "s")
+      .leftJoinAndSelect("p.insurances", "i")
+      .leftJoinAndSelect("p.clinic", "clinic")
+      .orderBy("p.createdAt", "DESC");
+    this.addProfListPredicates(dataQb, "clinic", q, minRating, maxRating);
+    const items = await dataQb
+      .skip((page - 1) * limit)
+      .take(limit)
+      .getMany();
+
+    return {
+      items,
+      total,
+      page,
+      limit,
+      totalPages: Math.max(1, Math.ceil(total / limit))
+    };
   }
 
   async create(dto: UpsertProfessionalDto) {

@@ -40,6 +40,7 @@ export default function ReviewsPage() {
   const [data, setData] = useState<PageData | null>(null);
   const [filter, setFilter] = useState<Filter>("all");
   const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(25);
   const [searchInput, setSearchInput] = useState("");
   const [debouncedQ, setDebouncedQ] = useState("");
   const [error, setError] = useState("");
@@ -54,12 +55,12 @@ export default function ReviewsPage() {
   }, [filter, debouncedQ]);
 
   const load = useCallback(async () => {
-    const q = new URLSearchParams({ page: String(page), limit: "12" });
+    const q = new URLSearchParams({ page: String(page), limit: String(limit) });
     if (debouncedQ) q.set("q", debouncedQ);
     if (filter !== "all") q.set("status", filter);
     const res = await apiRequest<PageData>(`/admin/reviews?${q.toString()}`);
     setData(res);
-  }, [page, filter, debouncedQ]);
+  }, [page, limit, filter, debouncedQ]);
 
   useEffect(() => {
     void load().catch((e) => setError(e instanceof Error ? e.message : "Erro ao carregar."));
@@ -164,10 +165,15 @@ export default function ReviewsPage() {
           page={data.page}
           totalPages={data.totalPages}
           total={data.total}
+          limit={data.limit}
           entityLabel="avaliações"
           onPageChange={(p) => {
             setPage(p);
             window.scrollTo({ top: 0, behavior: "smooth" });
+          }}
+          onLimitChange={(n) => {
+            setLimit(n);
+            setPage(1);
           }}
         />
       ) : null}

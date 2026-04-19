@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, UseGuards } from "@nestjs/common";
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query, UseGuards } from "@nestjs/common";
 import { ApiBearerAuth, ApiTags } from "@nestjs/swagger";
 import { Roles } from "../../../common/decorators/roles.decorator";
 import { Role } from "../../../common/enums/role.enum";
@@ -16,8 +16,20 @@ export class AdminProfessionalsController {
   constructor(private readonly adminProfessionalsService: AdminProfessionalsService) {}
 
   @Get()
-  list() {
-    return this.adminProfessionalsService.list();
+  list(
+    @Query("page") page?: string,
+    @Query("limit") limit?: string,
+    @Query("q") q?: string,
+    @Query("minRating") minRating?: string,
+    @Query("maxRating") maxRating?: string
+  ) {
+    return this.adminProfessionalsService.list(
+      Number(page) || 1,
+      Number(limit) || 25,
+      q,
+      minRating,
+      maxRating
+    );
   }
 
   @Post()

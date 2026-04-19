@@ -27,7 +27,7 @@ export class AdminReviewsController {
     @Query("q") q?: string,
     @Query("status") status?: string
   ) {
-    return this.adminReviewsService.list(Number(page) || 1, Number(limit) || 20, q, status);
+    return this.adminReviewsService.list(Number(page) || 1, Number(limit) || 25, q, status);
   }
 
   @Patch(":id/moderate")

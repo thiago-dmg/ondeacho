@@ -3,6 +3,15 @@ import { InjectRepository } from "@nestjs/typeorm";
 import { Repository } from "typeorm";
 import { ReviewEntity } from "../../reviews/entities/review.entity";
 
+const PAGE_SIZES = [10, 25, 50, 100] as const;
+
+function normalizeLimit(raw: number): number {
+  if (PAGE_SIZES.includes(raw as (typeof PAGE_SIZES)[number])) {
+    return raw;
+  }
+  return 25;
+}
+
 export type AdminReviewRow = {
   id: string;
   clinicId: string;
@@ -20,9 +29,9 @@ export class AdminReviewsService {
     private readonly reviewsRepository: Repository<ReviewEntity>
   ) {}
 
-  async list(pageRaw = 1, limitRaw = 20, q?: string, status?: string) {
+  async list(pageRaw = 1, limitRaw = 25, q?: string, status?: string) {
     const page = Math.max(1, pageRaw || 1);
-    const limit = Math.min(100, Math.max(1, limitRaw || 20));
+    const limit = normalizeLimit(Number(limitRaw) || 25);
     const qb = this.reviewsRepository
       .createQueryBuilder("r")
       .leftJoinAndSelect("r.clinic", "clinic")

@@ -33,6 +33,7 @@ const ROLES: { id: Role; label: string }[] = [
 export default function UsersPage() {
   const [data, setData] = useState<Paginated<UserRow> | null>(null);
   const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(25);
   const [searchInput, setSearchInput] = useState("");
   const [debouncedQ, setDebouncedQ] = useState("");
   const [error, setError] = useState("");
@@ -53,11 +54,11 @@ export default function UsersPage() {
   }, [debouncedQ]);
 
   const load = useCallback(async () => {
-    const q = new URLSearchParams({ page: String(page), limit: "15" });
+    const q = new URLSearchParams({ page: String(page), limit: String(limit) });
     if (debouncedQ) q.set("q", debouncedQ);
     const res = await apiRequest<Paginated<UserRow>>(`/admin/users?${q.toString()}`);
     setData(res);
-  }, [page, debouncedQ]);
+  }, [page, limit, debouncedQ]);
 
   useEffect(() => {
     void load().catch((e) => setError(e instanceof Error ? e.message : "Erro ao carregar."));
@@ -170,10 +171,15 @@ export default function UsersPage() {
           page={data.page}
           totalPages={data.totalPages}
           total={data.total}
+          limit={data.limit}
           entityLabel="usuários"
           onPageChange={(p) => {
             setPage(p);
             window.scrollTo({ top: 0, behavior: "smooth" });
+          }}
+          onLimitChange={(n) => {
+            setLimit(n);
+            setPage(1);
           }}
         />
       ) : null}

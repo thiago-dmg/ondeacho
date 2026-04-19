@@ -1,5 +1,7 @@
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useCallback, useEffect, useState } from "react";
 import { AdminLayout } from "../src/components/AdminLayout";
+import { AdminPagination } from "../src/components/AdminPagination";
+import { AdminSearchField } from "../src/components/AdminSearchField";
 import { Modal } from "../src/components/Modal";
 import { apiRequest } from "../src/services/api";
 
@@ -60,6 +62,14 @@ function profToForm(p: Professional): ProfForm {
     insuranceIds: p.insurances?.map((i) => i.id) ?? []
   };
 }
+
+type ProfessionalsPageResponse = {
+  items: Professional[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+};
 
 function formToPayload(f: ProfForm) {
   const rating = Math.min(5, Math.max(0, Number.parseFloat(f.rating) || 0));
@@ -231,6 +241,15 @@ function ProfFormFields({
 
 export default function ProfessionalsPage() {
   const [items, setItems] = useState<Professional[]>([]);
+  const [listMeta, setListMeta] = useState<ProfessionalsPageResponse | null>(null);
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(25);
+  const [searchInput, setSearchInput] = useState("");
+  const [minRatingInput, setMinRatingInput] = useState("");
+  const [maxRatingInput, setMaxRatingInput] = useState("");
+  const [debouncedQ, setDebouncedQ] = useState("");
+  const [debouncedMinRating, setDebouncedMinRating] = useState("");
+  const [debouncedMaxRating, setDebouncedMaxRating] = useState("");
   const [clinics, setClinics] = useState<ClinicOption[]>([]);
   const [specialties, setSpecialties] = useState<CatalogItem[]>([]);
   const [insurances, setInsurances] = useState<CatalogItem[]>([]);
@@ -240,22 +259,53 @@ export default function ProfessionalsPage() {
   const [editForm, setEditForm] = useState<ProfForm>(() => emptyForm());
   const [error, setError] = useState("");
 
-  async function load() {
-    const [profs, clinicRes, specList, insList] = await Promise.all([
-      apiRequest<Professional[]>("/admin/professionals"),
+  useEffect(() => {
+    const t = window.setTimeout(() => {
+      setDebouncedQ(searchInput.trim());
+      setDebouncedMinRating(minRatingInput.trim());
+      setDebouncedMaxRating(maxRatingInput.trim());
+    }, 400);
+    return () => window.clearTimeout(t);
+  }, [searchInput, minRatingInput, maxRatingInput]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [debouncedQ, debouncedMinRating, debouncedMaxRating]);
+
+  const loadCatalogs = useCallback(async () => {
+    const [clinicRes, specList, insList] = await Promise.all([
       apiRequest<{ items: ClinicOption[] }>("/admin/clinics?limit=500&page=1"),
       apiRequest<CatalogItem[]>("/admin/specialties"),
       apiRequest<CatalogItem[]>("/admin/insurances")
     ]);
-    setItems(profs);
     setClinics(clinicRes.items.map((c) => ({ id: c.id, name: c.name, city: c.city })));
     setSpecialties(specList);
     setInsurances(insList);
-  }
+  }, []);
+
+  const loadProfessionals = useCallback(async () => {
+    const q = new URLSearchParams({ page: String(page), limit: String(limit) });
+    if (debouncedQ) q.set("q", debouncedQ);
+    if (debouncedMinRating !== "") {
+      const n = Number(debouncedMinRating.replace(",", "."));
+      if (Number.isFinite(n)) q.set("minRating", String(n));
+    }
+    if (debouncedMaxRating !== "") {
+      const n = Number(debouncedMaxRating.replace(",", "."));
+      if (Number.isFinite(n)) q.set("maxRating", String(n));
+    }
+    const res = await apiRequest<ProfessionalsPageResponse>(`/admin/professionals?${q.toString()}`);
+    setItems(res.items);
+    setListMeta(res);
+  }, [page, limit, debouncedQ, debouncedMinRating, debouncedMaxRating]);
 
   useEffect(() => {
-    void load().catch((e) => setError(e instanceof Error ? e.message : "Erro ao carregar."));
-  }, []);
+    void loadCatalogs().catch((e) => setError(e instanceof Error ? e.message : "Erro ao carregar."));
+  }, [loadCatalogs]);
+
+  useEffect(() => {
+    void loadProfessionals().catch((e) => setError(e instanceof Error ? e.message : "Erro ao carregar."));
+  }, [loadProfessionals]);
 
   async function create(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -266,7 +316,7 @@ export default function ProfessionalsPage() {
         body: JSON.stringify(formToPayload(createForm))
       });
       setCreateForm(emptyForm());
-      await load();
+      await loadProfessionals();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Falha ao criar.");
     }
@@ -288,7 +338,7 @@ export default function ProfessionalsPage() {
       });
       setEditOpen(false);
       setEditing(null);
-      await load();
+      await loadProfessionals();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Falha ao salvar.");
     }
@@ -299,7 +349,7 @@ export default function ProfessionalsPage() {
     setError("");
     try {
       await apiRequest(`/admin/professionals/${id}`, { method: "DELETE" });
-      await load();
+      await loadProfessionals();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Falha ao excluir.");
     }
@@ -328,6 +378,50 @@ export default function ProfessionalsPage() {
             </button>
           </div>
         </form>
+      </div>
+
+      <div className="oa-filters-row">
+        <AdminSearchField
+          label="Nome, cidade, bairro ou clínica"
+          placeholder="Ex.: fonoaudiologia, Campinas…"
+          value={searchInput}
+          onChange={(v) => {
+            setSearchInput(v);
+            setError("");
+          }}
+        />
+        <div className="oa-field oa-field--narrow">
+          <label className="oa-label" htmlFor="prof-min-rating">
+            Nota mín.
+          </label>
+          <input
+            id="prof-min-rating"
+            className="oa-input"
+            type="number"
+            step="0.1"
+            min={0}
+            max={5}
+            placeholder="—"
+            value={minRatingInput}
+            onChange={(e) => setMinRatingInput(e.target.value)}
+          />
+        </div>
+        <div className="oa-field oa-field--narrow">
+          <label className="oa-label" htmlFor="prof-max-rating">
+            Nota máx.
+          </label>
+          <input
+            id="prof-max-rating"
+            className="oa-input"
+            type="number"
+            step="0.1"
+            min={0}
+            max={5}
+            placeholder="—"
+            value={maxRatingInput}
+            onChange={(e) => setMaxRatingInput(e.target.value)}
+          />
+        </div>
       </div>
 
       <div className="oa-table-wrap">
@@ -374,6 +468,24 @@ export default function ProfessionalsPage() {
           </tbody>
         </table>
       </div>
+
+      {listMeta ? (
+        <AdminPagination
+          page={listMeta.page}
+          totalPages={listMeta.totalPages}
+          total={listMeta.total}
+          limit={listMeta.limit}
+          entityLabel="profissionais"
+          onPageChange={(p) => {
+            setPage(p);
+            window.scrollTo({ top: 0, behavior: "smooth" });
+          }}
+          onLimitChange={(n) => {
+            setLimit(n);
+            setPage(1);
+          }}
+        />
+      ) : null}
 
       <Modal
         open={editOpen}

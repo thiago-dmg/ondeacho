@@ -19,9 +19,17 @@ export class AdminClinicsController {
   list(
     @Query("page") page?: string,
     @Query("limit") limit?: string,
-    @Query("q") q?: string
+    @Query("q") q?: string,
+    @Query("minCommunityRating") minCommunityRating?: string,
+    @Query("maxCommunityRating") maxCommunityRating?: string
   ) {
-    return this.adminClinicsService.list(Number(page) || 1, Number(limit) || 20, q);
+    return this.adminClinicsService.list(
+      Number(page) || 1,
+      Number(limit) || 25,
+      q,
+      minCommunityRating,
+      maxCommunityRating
+    );
   }
 
   @Post()

@@ -623,7 +623,7 @@ button {
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: 14px;
   margin-top: 20px;
   padding: 14px 16px;
   background: var(--oa-surface);
@@ -631,12 +631,49 @@ button {
   border-radius: var(--oa-radius-sm);
 }
 
+.oa-pagination__left {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 16px;
+}
+
 .oa-pagination__meta {
   font-size: 0.85rem;
   color: var(--oa-muted);
 }
 
+.oa-pagination__limit {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--oa-muted);
+}
+
+.oa-select--inline {
+  width: auto;
+  min-width: 72px;
+  padding: 6px 10px;
+  font-size: 0.85rem;
+}
+
 .oa-pagination__btns {
   display: flex;
   gap: 8px;
+}
+
+.oa-filters-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  align-items: flex-end;
+  margin-bottom: 16px;
+}
+
+.oa-filters-row .oa-field--narrow {
+  flex: 0 0 auto;
+  width: 120px;
+  max-width: 100%;
 }

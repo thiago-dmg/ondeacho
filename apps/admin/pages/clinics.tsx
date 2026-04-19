@@ -291,10 +291,15 @@ function ClinicFormFields({
 
 export default function ClinicsPage() {
   const [clinics, setClinics] = useState<Clinic[]>([]);
-  const [listMeta, setListMeta] = useState<{ total: number; page: number; totalPages: number } | null>(null);
+  const [listMeta, setListMeta] = useState<ClinicsPageResponse | null>(null);
   const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(25);
   const [searchInput, setSearchInput] = useState("");
+  const [minRatingInput, setMinRatingInput] = useState("");
+  const [maxRatingInput, setMaxRatingInput] = useState("");
   const [debouncedQ, setDebouncedQ] = useState("");
+  const [debouncedMinRating, setDebouncedMinRating] = useState("");
+  const [debouncedMaxRating, setDebouncedMaxRating] = useState("");
   const [specialties, setSpecialties] = useState<CatalogItem[]>([]);
   const [insurances, setInsurances] = useState<CatalogItem[]>([]);
   const [createForm, setCreateForm] = useState<ClinicForm>(() => emptyForm());
@@ -304,13 +309,17 @@ export default function ClinicsPage() {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    const t = window.setTimeout(() => setDebouncedQ(searchInput.trim()), 400);
+    const t = window.setTimeout(() => {
+      setDebouncedQ(searchInput.trim());
+      setDebouncedMinRating(minRatingInput.trim());
+      setDebouncedMaxRating(maxRatingInput.trim());
+    }, 400);
     return () => window.clearTimeout(t);
-  }, [searchInput]);
+  }, [searchInput, minRatingInput, maxRatingInput]);
 
   useEffect(() => {
     setPage(1);
-  }, [debouncedQ]);
+  }, [debouncedQ, debouncedMinRating, debouncedMaxRating]);
 
   const loadCatalogs = useCallback(async () => {
     const [specList, insList] = await Promise.all([
@@ -322,12 +331,20 @@ export default function ClinicsPage() {
   }, []);
 
   const loadClinics = useCallback(async () => {
-    const q = new URLSearchParams({ page: String(page), limit: "12" });
+    const q = new URLSearchParams({ page: String(page), limit: String(limit) });
     if (debouncedQ) q.set("q", debouncedQ);
+    if (debouncedMinRating !== "") {
+      const n = Number(debouncedMinRating.replace(",", "."));
+      if (Number.isFinite(n)) q.set("minCommunityRating", String(n));
+    }
+    if (debouncedMaxRating !== "") {
+      const n = Number(debouncedMaxRating.replace(",", "."));
+      if (Number.isFinite(n)) q.set("maxCommunityRating", String(n));
+    }
     const res = await apiRequest<ClinicsPageResponse>(`/admin/clinics?${q.toString()}`);
     setClinics(res.items);
-    setListMeta({ total: res.total, page: res.page, totalPages: res.totalPages });
-  }, [page, debouncedQ]);
+    setListMeta(res);
+  }, [page, limit, debouncedQ, debouncedMinRating, debouncedMaxRating]);
 
   useEffect(() => {
     void loadCatalogs().catch((e) => setError(e instanceof Error ? e.message : "Erro ao carregar."));
@@ -392,18 +409,6 @@ export default function ClinicsPage() {
     >
       {error ? <p className="oa-error">{error}</p> : null}
 
-      <div className="oa-toolbar">
-        <AdminSearchField
-          label="Buscar clínicas"
-          placeholder="Nome, cidade ou bairro…"
-          value={searchInput}
-          onChange={(v) => {
-            setSearchInput(v);
-            setError("");
-          }}
-        />
-      </div>
-
       <div className="oa-card" style={{ marginBottom: 24 }}>
         <h2 className="oa-card__title">Nova clínica</h2>
         <form onSubmit={(e) => void createClinic(e)}>
@@ -414,6 +419,53 @@ export default function ClinicsPage() {
             </button>
           </div>
         </form>
+      </div>
+
+      <p className="oa-muted" style={{ margin: "0 0 12px", fontSize: "0.85rem" }}>
+        Filtros abaixo aplicam-se à tabela. Nota = média de avaliações <strong>aprovadas</strong> na comunidade (clínicas sem avaliações aprovadas ficam de fora ao filtrar por nota).
+      </p>
+      <div className="oa-filters-row">
+        <AdminSearchField
+          label="Nome, cidade ou bairro"
+          placeholder="Ex.: Campinas, Cambuí…"
+          value={searchInput}
+          onChange={(v) => {
+            setSearchInput(v);
+            setError("");
+          }}
+        />
+        <div className="oa-field oa-field--narrow">
+          <label className="oa-label" htmlFor="clinic-min-rating">
+            Nota mín. (comunidade)
+          </label>
+          <input
+            id="clinic-min-rating"
+            className="oa-input"
+            type="number"
+            step="0.1"
+            min={0}
+            max={5}
+            placeholder="—"
+            value={minRatingInput}
+            onChange={(e) => setMinRatingInput(e.target.value)}
+          />
+        </div>
+        <div className="oa-field oa-field--narrow">
+          <label className="oa-label" htmlFor="clinic-max-rating">
+            Nota máx. (comunidade)
+          </label>
+          <input
+            id="clinic-max-rating"
+            className="oa-input"
+            type="number"
+            step="0.1"
+            min={0}
+            max={5}
+            placeholder="—"
+            value={maxRatingInput}
+            onChange={(e) => setMaxRatingInput(e.target.value)}
+          />
+        </div>
       </div>
 
       <div className="oa-table-wrap">
@@ -467,10 +519,15 @@ export default function ClinicsPage() {
           page={listMeta.page}
           totalPages={listMeta.totalPages}
           total={listMeta.total}
+          limit={listMeta.limit}
           entityLabel="clínicas"
           onPageChange={(p) => {
             setPage(p);
             window.scrollTo({ top: 0, behavior: "smooth" });
+          }}
+          onLimitChange={(n) => {
+            setLimit(n);
+            setPage(1);
           }}
         />
       ) : null}

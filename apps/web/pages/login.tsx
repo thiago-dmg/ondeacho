@@ -119,9 +119,25 @@ export default function LoginPage() {
               onChange={(e) => setPassword(e.target.value)}
               autoComplete={mode === "login" ? "current-password" : "new-password"}
               required
-              minLength={6}
+              minLength={mode === "login" ? 1 : 8}
             />
           </label>
+          {mode === "login" ? (
+            <div style={{ marginBottom: 16, textAlign: "right" }}>
+              <Link
+                href="/esqueci-senha"
+                style={{
+                  color: "var(--color-primary)",
+                  fontWeight: 700,
+                  fontSize: 15,
+                  textDecoration: "underline",
+                  textUnderlineOffset: 3
+                }}
+              >
+                Esqueci minha senha
+              </Link>
+            </div>
+          ) : null}
           {error ? (
             <p style={{ color: "#b45309", marginBottom: 12 }} role="alert">
               {error}
@@ -130,11 +146,6 @@ export default function LoginPage() {
           <button type="submit" className="btn-primary" style={{ width: "100%" }} disabled={submitting}>
             {submitting ? "Aguarde…" : mode === "login" ? "Entrar" : "Cadastrar"}
           </button>
-          {mode === "login" ? (
-            <p style={{ marginTop: 14, textAlign: "center" }} className="muted">
-              <Link href="/esqueci-senha">Esqueci minha senha</Link>
-            </p>
-          ) : null}
         </form>
 
         <p style={{ marginTop: 20 }} className="muted">
