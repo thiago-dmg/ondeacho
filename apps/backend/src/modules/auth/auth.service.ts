@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   Injectable,
+  Logger,
   NotFoundException,
   UnauthorizedException
 } from "@nestjs/common";
@@ -25,6 +26,8 @@ import {
 
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
+
   constructor(
     private readonly jwtService: JwtService,
     private readonly config: ConfigService,
@@ -32,6 +35,22 @@ export class AuthService {
     @InjectRepository(UserEntity)
     private readonly usersRepository: Repository<UserEntity>
   ) {}
+
+  /** Origem do site onde existe `/redefinir-senha` (sem path extra nem barra final). */
+  private normalizePasswordResetBase(raw: string): string {
+    let s = raw.trim().replace(/\/+$/, "");
+    if (!s) {
+      s = "http://localhost:3002";
+    }
+    if (/^https?:\/\//i.test(s)) {
+      try {
+        return new URL(s).origin;
+      } catch {
+        return s;
+      }
+    }
+    return s;
+  }
 
   async register(dto: RegisterDto) {
     const normalizedEmail = dto.email.toLowerCase();
@@ -94,9 +113,18 @@ export class AuthService {
       user.passwordResetTokenHash = tokenHash;
       user.passwordResetExpiresAt = new Date(Date.now() + 60 * 60 * 1000);
       await this.usersRepository.save(user);
-      const base = (this.config.get<string>("PASSWORD_RESET_PUBLIC_URL") ?? "http://localhost:3002")
-        .trim()
-        .replace(/\/+$/, "");
+      const configured = this.config.get<string>("PASSWORD_RESET_PUBLIC_URL") ?? "http://localhost:3002";
+      const base = this.normalizePasswordResetBase(configured);
+      try {
+        const host = new URL(base).hostname;
+        if (host === "api.ondeachotea.com" || /^api\./i.test(host)) {
+          this.logger.warn(
+            `PASSWORD_RESET_PUBLIC_URL resolve para o host da API (${host}). O e-mail deve apontar para o domínio do site público (ex.: https://ondeachotea.com), onde existe a página /redefinir-senha — caso contrário o utilizador verá 404.`
+          );
+        }
+      } catch {
+        /* base relativo ou inválido para URL — ignorar */
+      }
       const resetUrl = `${base}/redefinir-senha?token=${encodeURIComponent(token)}`;
       await this.mailService.sendPasswordResetEmail(normalizedEmail, resetUrl);
     }

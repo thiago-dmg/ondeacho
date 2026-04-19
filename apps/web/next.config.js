@@ -23,7 +23,9 @@ const nextConfig = {
       { source: "/Conta", destination: "/conta", permanent: false },
       { source: "/Login", destination: "/login", permanent: false },
       { source: "/Esqueci-senha", destination: "/esqueci-senha", permanent: false },
-      { source: "/esqueci-Senha", destination: "/esqueci-senha", permanent: false }
+      { source: "/esqueci-Senha", destination: "/esqueci-senha", permanent: false },
+      { source: "/Redefinir-senha", destination: "/redefinir-senha", permanent: false },
+      { source: "/redefinir-Senha", destination: "/redefinir-senha", permanent: false }
     ];
   },
   async rewrites() {

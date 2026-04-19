@@ -23,7 +23,7 @@ Não commite chaves no repositório.
    sudo nano /etc/ondeacho-api.env
    ```
 
-   Use como base `apps/backend/.env.example`. Variáveis mínimas típicas: `PORT`, `JWT_SECRET`, `DB_*` ou URL do Postgres, `CORS_ORIGINS` (URL do admin/app em produção).
+   Use como base `apps/backend/.env.example`. Variáveis mínimas típicas: `PORT`, `JWT_SECRET`, `DB_*` ou URL do Postgres, `CORS_ORIGINS` (URL do admin/app em produção), **`PASSWORD_RESET_PUBLIC_URL=https://ondeachotea.com`** (origem do site público onde existe `/redefinir-senha` — **não** uses o host `api.`).
 
    ```bash
    sudo chmod 600 /etc/ondeacho-api.env

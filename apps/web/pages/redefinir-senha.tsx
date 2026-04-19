@@ -14,9 +14,21 @@ export default function RedefinirSenhaPage() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
+    if (!router.isReady) {
+      return;
+    }
     const t = router.query.token;
-    if (typeof t === "string") setToken(t);
-  }, [router.query.token]);
+    if (typeof t === "string" && t.length > 0) {
+      setToken(t);
+      return;
+    }
+    if (Array.isArray(t)) {
+      const first = t.find((x) => x.length > 0);
+      if (first) {
+        setToken(first);
+      }
+    }
+  }, [router.isReady, router.query.token]);
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
@@ -30,7 +42,7 @@ export default function RedefinirSenhaPage() {
       return;
     }
     if (!token) {
-      setError("Abra o link completo enviado por e-mail.");
+      setError("Abra o link completo enviado por e-mail, ou solicite um novo em «Esqueci a senha».");
       return;
     }
     setLoading(true);
@@ -46,6 +58,16 @@ export default function RedefinirSenhaPage() {
     } finally {
       setLoading(false);
     }
+  }
+
+  if (!router.isReady) {
+    return (
+      <SiteLayout title="Nova senha">
+        <div className="container" style={{ paddingTop: 40, paddingBottom: 48, maxWidth: 460 }}>
+          <p className="muted">A carregar…</p>
+        </div>
+      </SiteLayout>
+    );
   }
 
   return (
@@ -73,18 +95,17 @@ export default function RedefinirSenhaPage() {
             <>
               <h1 style={{ fontSize: 26, margin: "0 0 12px", color: "#0f766e" }}>Senha atualizada</h1>
               <p className="muted" style={{ lineHeight: 1.65, marginBottom: 16 }}>
-                A sua conta já está com a nova senha. <strong>Volte ao aplicativo OndeAcho</strong> no celular e faça login
-                normalmente — ou use o site abaixo.
+                A sua conta já está com a nova senha. Pode entrar no site ou na app com o mesmo e-mail.
               </p>
               <Link href="/login" className="btn-primary" style={{ display: "inline-block", marginTop: 8, textDecoration: "none" }}>
-                Entrar na web
+                Ir para o login
               </Link>
             </>
           ) : (
             <>
               <h1 style={{ fontSize: 26, margin: "0 0 10px" }}>Definir nova senha</h1>
               <p className="muted" style={{ marginBottom: 22, lineHeight: 1.55 }}>
-                Escolha uma senha com pelo menos 8 caracteres.
+                Escolha uma senha com pelo menos 8 caracteres. O link expira em cerca de 1 hora.
               </p>
               <form onSubmit={onSubmit}>
                 <label style={{ display: "block", marginBottom: 14 }}>
@@ -115,17 +136,23 @@ export default function RedefinirSenhaPage() {
                     required
                   />
                 </label>
+                {!token ? (
+                  <p style={{ color: "#b45309", marginBottom: 12 }} role="alert">
+                    Falta o token no endereço. Abra o link do e-mail ou peça um novo em{" "}
+                    <Link href="/esqueci-senha">Esqueci a senha</Link>.
+                  </p>
+                ) : null}
                 {error ? (
                   <p style={{ color: "#b45309", marginBottom: 12 }} role="alert">
                     {error}
                   </p>
                 ) : null}
-                <button type="submit" className="btn-primary" style={{ width: "100%" }} disabled={loading}>
+                <button type="submit" className="btn-primary" style={{ width: "100%" }} disabled={loading || !token}>
                   {loading ? "A guardar…" : "Guardar nova senha"}
                 </button>
               </form>
               <p style={{ marginTop: 20 }}>
-                <Link href="/login">← Login</Link>
+                <Link href="/login">← Voltar ao login</Link>
               </p>
             </>
           )}

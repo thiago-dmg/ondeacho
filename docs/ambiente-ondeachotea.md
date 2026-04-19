@@ -64,6 +64,20 @@ CORS_ORIGINS=https://ondeachotea.com,https://www.ondeachotea.com,https://admin.o
 
 Inclua `http://localhost:3001` e `http://localhost:3002` apenas em desenvolvimento local.
 
+## API — link de redefinir senha no e-mail (`PASSWORD_RESET_PUBLIC_URL`)
+
+No `/etc/ondeacho-api.env` (ou `.env` local), defina a **origem do site público** onde o Next (`apps/web`) serve `/redefinir-senha`:
+
+```env
+PASSWORD_RESET_PUBLIC_URL=https://ondeachotea.com
+```
+
+- **Não** use `https://api.ondeachotea.com` — a API não tem essa página (404).
+- **Não** use só `https://admin.ondeachotea.com` a menos que garantas essa rota no admin; o fluxo canónico é o **site**.
+- Valores com path extra (ex. `https://ondeachotea.com/foo`) são normalizados para a **origem** só (`https://ondeachotea.com`).
+
+No **admin** em produção, `NEXT_PUBLIC_PUBLIC_WEB_ORIGIN=https://ondeachotea.com` (ver `apps/admin/.env.production`) faz com que quem abra um link antigo `...admin.../redefinir-senha?token=` seja **redireccionado** para o mesmo path no site.
+
 ## Clientes — `NEXT_PUBLIC_API_URL` / Flutter
 
 | Cliente | Variável | Exemplo produção |

@@ -4,6 +4,8 @@ import { useRouter } from "next/router";
 import { AdminLayout } from "../src/components/AdminLayout";
 import { apiRequest } from "../src/services/api";
 
+const publicWebOrigin = (process.env.NEXT_PUBLIC_PUBLIC_WEB_ORIGIN ?? "").trim().replace(/\/+$/, "");
+
 export default function RedefinirSenhaPage() {
   const router = useRouter();
   const [token, setToken] = useState("");
@@ -12,13 +14,31 @@ export default function RedefinirSenhaPage() {
   const [error, setError] = useState("");
   const [ok, setOk] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [redirectingToWeb, setRedirectingToWeb] = useState(false);
 
   useEffect(() => {
+    if (!router.isReady) {
+      return;
+    }
+    if (!publicWebOrigin) {
+      const t = router.query.token;
+      if (typeof t === "string") {
+        setToken(t);
+      }
+      return;
+    }
     const t = router.query.token;
+    if (typeof t === "string" && t.trim().length > 0) {
+      setRedirectingToWeb(true);
+      window.location.replace(
+        `${publicWebOrigin}/redefinir-senha?token=${encodeURIComponent(t.trim())}`
+      );
+      return;
+    }
     if (typeof t === "string") {
       setToken(t);
     }
-  }, [router.query.token]);
+  }, [router.isReady, router.query.token]);
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
@@ -48,6 +68,20 @@ export default function RedefinirSenhaPage() {
     } finally {
       setLoading(false);
     }
+  }
+
+  if (!router.isReady || redirectingToWeb) {
+    return (
+      <AdminLayout variant="auth" title="Nova senha">
+        <div className="oa-card" style={{ maxWidth: 440, padding: 28, textAlign: "center" }}>
+          <p className="oa-muted" style={{ margin: 0 }}>
+            {redirectingToWeb
+              ? "A abrir o site público para definir a nova senha…"
+              : "A carregar…"}
+          </p>
+        </div>
+      </AdminLayout>
+    );
   }
 
   return (
