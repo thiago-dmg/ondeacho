@@ -22,7 +22,7 @@ Build:
 npm run build --workspace apps/web
 ```
 
-Configure `NEXT_PUBLIC_API_URL=https://api.ondeachotea.com/api/v1` no ambiente de build (e `CORS` na API com `https://ondeachotea.com`).
+Por defeito o build usa **`apps/web/.env.production`** com `NEXT_PUBLIC_API_URL=/api/v1` (mesmo host do site; proxy no Next). Para API em subdomínio, define `NEXT_PUBLIC_API_URL=https://api.ondeachotea.com/api/v1` antes do build e CORS na API.
 
 ## Deploy
 

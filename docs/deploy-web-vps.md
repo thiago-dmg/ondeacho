@@ -5,10 +5,10 @@ Mesma ideia do [deploy do admin](./deploy-admin-vps.md): Next.js em **localhost:
 ## O que precisas na VPS (resumo)
 
 1. **Node 20** (igual ao admin / CI).
-2. **API** a correr (ex. `ondeacho-api` na 3000) e **`CORS_ORIGINS`** com `https://ondeachotea.com` e `https://www.ondeachotea.com` se o site chamar `https://api.ondeachotea.com`.
-3. **Build** do `apps/web` com `NEXT_PUBLIC_API_URL` definido **no momento do build** (ver abaixo).
+2. **API** a correr (ex. `ondeacho-api` na **3000**). Com o build por defeito do site (`NEXT_PUBLIC_API_URL=/api/v1`), o Next faz proxy para esse Nest — **não** precisas de subdomínio `api` nem CORS extra só por causa do site.
+3. **Build** do `apps/web`: `npm run build --workspace apps/web` (usa `apps/web/.env.production` versionado).
 4. **systemd** a servir `next start -p 3002` a partir da pasta `current` (ou deploy manual equivalente).
-5. **Nginx** com `server_name ondeachotea.com www.ondeachotea.com` e `proxy_pass http://127.0.0.1:3002`.
+5. **Nginx** com `server_name ondeachotea.com www.ondeachotea.com` e `proxy_pass http://127.0.0.1:3002` (só precisa de `location /` — os pedidos `/api/v1` chegam ao Next e são reencaminhados internamente).
 
 Mais contexto de DNS, CORS e exemplo Nginx (site + **api** + admin): [ambiente-ondeachotea.md](./ambiente-ondeachotea.md) e [nginx-ondeachotea-exemplo.conf](./nginx-ondeachotea-exemplo.conf).
 
@@ -18,36 +18,35 @@ Na **raiz do monorepo** (com `npm ci` ou `npm install` já feito):
 
 ```bash
 export NODE_ENV=production
-export NEXT_PUBLIC_API_URL=https://api.ondeachotea.com/api/v1
-export NEXT_PUBLIC_SITE_URL=https://ondeachotea.com
 npm run build --workspace apps/web
 ```
 
+O **`apps/web/.env.production`** define `NEXT_PUBLIC_API_URL=/api/v1` (mesma origem + rewrites no `next.config.js`).
+
+Para build com API em subdomínio (opcional):  
+`export NEXT_PUBLIC_API_URL=https://api.ondeachotea.com/api/v1` antes do `npm run build`.
+
 Em Linux na VPS o output fica em `apps/web/.next-build`. No Windows o projeto pode usar `../../.web-next-build` na raiz do repo — em deploy Linux usa sempre o caminho do `next.config.js` do `apps/web`.
 
-**Importante:** `NEXT_PUBLIC_*` fica “gravada” no JavaScript gerado; mudar só no `systemd` sem novo **build** não altera a URL da API no browser.
+**Importante:** `NEXT_PUBLIC_`* fica “gravada” no JavaScript gerado; mudar só no `systemd` sem novo **build** não altera a URL da API no browser.
 
 ## Primeira vez na VPS (manual, estilo admin)
 
 1. Clona o repo (ou copia o artefacto de CI) para um diretório de trabalho.
 2. Instala dependências na raiz: `npm ci`.
-3. Exporta as variáveis acima e corre `npm run build --workspace apps/web`.
+3. Corre `npm run build --workspace apps/web` (ou exporta variáveis se quiseres URL absoluta da API).
 4. Copia para um destino fixo, por exemplo:
-
-   ```text
+  ```text
    /var/www/ondeacho-web/current/
      node_modules/          (da raiz do monorepo, ou só o necessário para next start)
      apps/web/package.json
      apps/web/.next-build/
      apps/web/next.config.js
      apps/web/public/
-   ```
-
+  ```
    O `next start` deve correr com **cwd** em `apps/web` (onde está o `package.json` do app web), como no admin.
-
 5. Cria o serviço systemd `ondeacho-web` (exemplo):
-
-   ```ini
+  ```ini
    [Unit]
    Description=OndeAcho site público (Next.js)
    After=network.target
@@ -62,10 +61,8 @@ Em Linux na VPS o output fica em `apps/web/.next-build`. No Windows o projeto po
 
    [Install]
    WantedBy=multi-user.target
-   ```
-
+  ```
    Ajusta caminhos se a tua árvore de ficheiros for outra (o essencial é `WorkingDirectory` = pasta do `apps/web` com `.next-build` ao lado lógico do que o Next espera).
-
 6. `sudo systemctl daemon-reload && sudo systemctl enable --now ondeacho-web`
 7. `curl -sI http://127.0.0.1:3002/` — deve responder **200**.
 
@@ -100,7 +97,7 @@ Não abras a **3002** à internet se usares Nginx: só **80/443** públicos; a 3
 
 ## GitHub Actions (opcional)
 
-O workflow [`.github/workflows/ci-deploy.yml`](../.github/workflows/ci-deploy.yml) já faz deploy da **API** e do **admin**. Para automatizar o site da mesma forma, seria preciso um job `deploy-web` espelhado ao `deploy-admin` (artefacto `apps/web/.next-build`, serviço `ondeacho-web`, pasta `/var/www/ondeacho-web`). Até lá, o deploy manual deste doc é suficiente.
+O workflow `[.github/workflows/ci-deploy.yml](../.github/workflows/ci-deploy.yml)` já faz deploy da **API** e do **admin**. Para automatizar o site da mesma forma, seria preciso um job `deploy-web` espelhado ao `deploy-admin` (artefacto `apps/web/.next-build`, serviço `ondeacho-web`, pasta `/var/www/ondeacho-web`). Até lá, o deploy manual deste doc é suficiente.
 
 ## Comandos úteis
 
@@ -114,8 +111,8 @@ curl -sI http://127.0.0.1:3002/
 
 Significa: **o Nginx está a correr**, mas **não há resposta válida** do Next na porta para onde o `proxy_pass` aponta (ex.: `127.0.0.1:3002`).
 
-1. Na VPS: `curl -sI http://127.0.0.1:3002/`  
-   - Se der **Connection refused** ou timeout → o site **não está a escutar** nessa porta: falta instalar/servir o `apps/web` (systemd `ondeacho-web` ou `next start` manual).
+1. Na VPS: `curl -sI http://127.0.0.1:3002/`
+  - Se der **Connection refused** ou timeout → o site **não está a escutar** nessa porta: falta instalar/servir o `apps/web` (systemd `ondeacho-web` ou `next start` manual).
 2. Confirma que o `proxy_pass` no bloco `server` de `ondeachotea.com` é **exactamente** a mesma porta do `next start` (3002 no nosso exemplo).
 3. `sudo systemctl status ondeacho-web` — se `inactive` ou `failed`, vê logs: `sudo journalctl -u ondeacho-web -n 80 --no-pager`.
 
