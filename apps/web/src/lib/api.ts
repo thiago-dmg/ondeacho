@@ -68,7 +68,8 @@ export async function apiRequest<T>(
 
   const response = await fetch(url, {
     ...init,
-    headers
+    headers,
+    cache: "no-store"
   });
 
   if (!response.ok) {

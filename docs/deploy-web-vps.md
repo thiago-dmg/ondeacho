@@ -2,6 +2,12 @@
 
 Mesma ideia do [deploy do admin](./deploy-admin-vps.md): Next.js em **localhost:3002**, Nginx na **443** com HTTPS, domínio apontando para a VPS.
 
+### Se o site em `ondeachotea.com` «não tem» o que o Git já tem (ex.: «Esqueci minha senha» no login, mapa ou redes na ficha)
+
+O repositório pode estar certo e **produção ainda a servir um build antigo** do `apps/web`, ou o browser/proxy a **cachear HTML**. Confirma na VPS: `sudo systemctl status ondeacho-web`, `curl -sI https://ondeachotea.com/login` (ou `http://127.0.0.1:3002/login`), faz **novo** `npm run build --workspace apps/web` + **restart** do serviço (ou deixa o job `deploy-web` da Actions concluir). Depois de publicar, o projecto inclui `middleware` com `Cache-Control: no-store` nas rotas principais para reduzir HTML antigo em cache.
+
+Para **redes sociais** após gravar no admin: na base tem de existir a migração **`010_clinic_website_social.sql`**; a API tem de estar actualizada; o pedido `GET /listings/:id` não pode estar em cache antigo (o backend envia `Cache-Control: no-store` nas listagens).
+
 ## O que precisas na VPS (resumo)
 
 1. **Node 20** (igual ao admin / CI).

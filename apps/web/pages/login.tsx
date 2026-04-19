@@ -108,7 +108,7 @@ export default function LoginPage() {
               required
             />
           </label>
-          <label style={{ display: "block", marginBottom: 20 }}>
+          <label style={{ display: "block", marginBottom: mode === "login" ? 12 : 20 }}>
             <span className="muted" style={{ display: "block", marginBottom: 6, fontSize: 13 }}>
               Senha
             </span>
@@ -123,16 +123,34 @@ export default function LoginPage() {
             />
           </label>
           {mode === "login" ? (
-            <div style={{ margin: "-8px 0 16px", textAlign: "right" }}>
+            <div
+              style={{
+                marginBottom: 18,
+                padding: "14px 14px 16px",
+                borderRadius: 12,
+                background: "rgba(13, 148, 136, 0.08)",
+                border: "1px solid rgba(13, 148, 136, 0.28)"
+              }}
+            >
+              <p style={{ margin: "0 0 8px", fontSize: 14, fontWeight: 700, color: "#0f766e" }}>Não consegue entrar?</p>
+              <p className="muted" style={{ margin: "0 0 10px", fontSize: 13, lineHeight: 1.45 }}>
+                Pedimos um link por e-mail (válido cerca de 1 hora). Abre a página para definir uma nova senha no site.
+              </p>
               <Link
                 href="/esqueci-senha"
                 prefetch={false}
+                className="btn-ghost"
                 style={{
-                  color: "var(--color-primary)",
-                  fontWeight: 700,
-                  fontSize: 15,
-                  textDecoration: "underline",
-                  textUnderlineOffset: 3
+                  display: "block",
+                  width: "100%",
+                  textAlign: "center",
+                  textDecoration: "none",
+                  fontWeight: 800,
+                  fontSize: 16,
+                  padding: "12px 14px",
+                  boxSizing: "border-box",
+                  borderColor: "var(--color-primary)",
+                  color: "var(--color-primary)"
                 }}
               >
                 Esqueci minha senha
@@ -147,35 +165,6 @@ export default function LoginPage() {
           <button type="submit" className="btn-primary" style={{ width: "100%" }} disabled={submitting}>
             {submitting ? "Aguarde…" : mode === "login" ? "Entrar" : "Cadastrar"}
           </button>
-          {mode === "login" ? (
-            <div
-              style={{
-                marginTop: 14,
-                paddingTop: 14,
-                borderTop: "1px solid var(--color-divider)",
-                textAlign: "center"
-              }}
-            >
-              <Link
-                href="/esqueci-senha"
-                prefetch={false}
-                style={{
-                  display: "inline-block",
-                  color: "var(--color-primary)",
-                  fontWeight: 800,
-                  fontSize: 16,
-                  textDecoration: "underline",
-                  textUnderlineOffset: 4,
-                  padding: "6px 4px"
-                }}
-              >
-                Esqueci minha senha
-              </Link>
-              <p className="muted" style={{ margin: "10px 0 0", fontSize: 13, lineHeight: 1.45 }}>
-                Enviaremos um e-mail com o link para criar uma nova senha (válido por 1 hora).
-              </p>
-            </div>
-          ) : null}
         </form>
 
         <p style={{ marginTop: 20 }} className="muted">
