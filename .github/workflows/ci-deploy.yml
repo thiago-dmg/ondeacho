@@ -1,8 +1,12 @@
-# CI (Node + Flutter) e deploy para VPS num único workflow — uma linha na aba Actions por push.
-# Secrets: VPS_SSH_HOST, VPS_SSH_USER, VPS_SSH_KEY
-# Variável/secret opcional: NEXT_PUBLIC_API_URL (admin + site); fallback nos jobs deploy-admin / deploy-web.
-# Na VPS: systemd `ondeacho-web` na porta 3002 (Nginx → ondeachotea.com), ver docs/deploy-web-vps.md.
-# Falha «dial tcp …:22: i/o timeout» no upload SSH: ver docs/deploy-vps.md (secção GitHub Actions / firewall).
+# CI (Node + Flutter) e deploy para produção na VPS (API + site + migrações) num único fluxo em push para main.
+#
+# Secrets obrigatórios: VPS_SSH_HOST, VPS_SSH_USER, VPS_SSH_KEY
+# Variáveis opcionais (GitHub → Settings → Variables): NEXT_PUBLIC_API_URL, NEXT_PUBLIC_SITE_URL
+#
+# Na VPS (uma vez): systemd `ondeacho-api` (:3000) e `ondeacho-web` (:3002); Nginx → proxy só para Node
+# (não sirvas `/_next/static` a partir de disco). Ver docs/deploy-acoes-github-producao.md
+#
+# Falha «dial tcp …:22: i/o timeout»: docs/deploy-vps.md (firewall / SSH).
 
 name: CI and Deploy
 
@@ -32,15 +36,14 @@ env:
   SERVICE_NAME_WEB: ondeacho-web
   REMOTE_DIR_WEB: /var/www/ondeacho-web
   WEB_PORT: 3002
-  # Padrão do admin: /api/v1 na mesma origem (proxy no next.config.js → 127.0.0.1:3000). Override opcional via vars/secrets.
   DEFAULT_NEXT_PUBLIC_API_URL: /api/v1
+  DEFAULT_NEXT_PUBLIC_SITE_URL: https://ondeachotea.com
 
 jobs:
   paths:
     runs-on: ubuntu-latest
     outputs:
       admin: ${{ steps.filter.outputs.admin }}
-      web: ${{ steps.filter.outputs.web }}
     steps:
       - uses: actions/checkout@v4
       - uses: dorny/paths-filter@v3
@@ -49,9 +52,6 @@ jobs:
           filters: |
             admin:
               - 'apps/admin/**'
-              - '.github/workflows/ci-deploy.yml'
-            web:
-              - 'apps/web/**'
               - '.github/workflows/ci-deploy.yml'
 
   ci-node:
@@ -65,8 +65,6 @@ jobs:
           cache: "npm"
 
       - name: Install dependencies
-        # --include=dev: com NODE_ENV=production o npm omite devDependencies (tsc, @types/*);
-        # sem isso o build do backend pode usar um tsc global (ex. TS 6) e falhar.
         run: npm ci --include=dev
 
       - name: Lint backend
@@ -77,6 +75,14 @@ jobs:
 
       - name: Lint web
         run: npm run lint:web
+
+      - name: Build backend (bloqueia merge quebrado)
+        run: npm run build --workspace apps/backend
+
+      - name: Build site apps/web (bloqueia merge quebrado)
+        env:
+          NODE_ENV: production
+        run: npm run build --workspace apps/web
 
   ci-mobile:
     runs-on: ubuntu-latest
@@ -95,7 +101,8 @@ jobs:
         run: flutter analyze
         working-directory: apps/mobile
 
-  deploy-api:
+  # Um único deploy em main: backend + migrações + site + restarts (sem depender de filtros por pasta).
+  deploy-production:
     needs: [ci-node, ci-mobile]
     if: |
       github.event_name == 'workflow_dispatch' ||
@@ -103,6 +110,48 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
+      - name: Resolver NEXT_PUBLIC_API_URL e NEXT_PUBLIC_SITE_URL
+        env:
+          FROM_VARS_API: ${{ vars.NEXT_PUBLIC_API_URL }}
+          FROM_SECRETS_API: ${{ secrets.NEXT_PUBLIC_API_URL }}
+          FROM_INPUT: ${{ github.event.inputs.next_public_api_url || '' }}
+          FALLBACK_API: ${{ env.DEFAULT_NEXT_PUBLIC_API_URL }}
+          FROM_VARS_SITE: ${{ vars.NEXT_PUBLIC_SITE_URL }}
+          FROM_SECRETS_SITE: ${{ secrets.NEXT_PUBLIC_SITE_URL }}
+          FALLBACK_SITE: ${{ env.DEFAULT_NEXT_PUBLIC_SITE_URL }}
+        run: |
+          set -euo pipefail
+          API_VAL=""
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ -n "${FROM_INPUT:-}" ]; then
+            API_VAL="${FROM_INPUT}"
+            SRC_API="workflow_dispatch input"
+          elif [ -n "${FROM_VARS_API:-}" ]; then
+            API_VAL="${FROM_VARS_API}"
+            SRC_API="vars.NEXT_PUBLIC_API_URL"
+          elif [ -n "${FROM_SECRETS_API:-}" ]; then
+            API_VAL="${FROM_SECRETS_API}"
+            SRC_API="secrets.NEXT_PUBLIC_API_URL"
+          else
+            API_VAL="${FALLBACK_API}"
+            SRC_API="default (same-origin /api/v1)"
+          fi
+          echo "NEXT_PUBLIC_API_URL=${API_VAL}" >> "$GITHUB_ENV"
+          echo "::notice::NEXT_PUBLIC_API_URL=${API_VAL} (${SRC_API})"
+
+          SITE_VAL=""
+          if [ -n "${FROM_VARS_SITE:-}" ]; then
+            SITE_VAL="${FROM_VARS_SITE}"
+            SRC_SITE="vars.NEXT_PUBLIC_SITE_URL"
+          elif [ -n "${FROM_SECRETS_SITE:-}" ]; then
+            SITE_VAL="${FROM_SECRETS_SITE}"
+            SRC_SITE="secrets.NEXT_PUBLIC_SITE_URL"
+          else
+            SITE_VAL="${FALLBACK_SITE}"
+            SRC_SITE="default ondeachotea.com"
+          fi
+          echo "NEXT_PUBLIC_SITE_URL=${SITE_VAL}" >> "$GITHUB_ENV"
+          echo "::notice::NEXT_PUBLIC_SITE_URL=${SITE_VAL} (${SRC_SITE})"
 
       - uses: actions/setup-node@v4
         with:
@@ -115,20 +164,38 @@ jobs:
       - name: Build backend
         run: npm run build --workspace apps/backend
 
-      - name: Prune devDependencies
+      - name: Build site (apps/web)
+        env:
+          NODE_ENV: production
+        run: npm run build --workspace apps/web
+
+      - name: Prune devDependencies (artefacto de runtime mais leve)
         run: npm prune --omit=dev
 
-      - name: Package release
+      - name: Empacotar API
         run: |
           set -e
-          mkdir -p pkg/apps/backend
-          cp package.json package-lock.json pkg/
-          cp -r node_modules pkg/
-          cp apps/backend/package.json pkg/apps/backend/
-          cp -r apps/backend/dist pkg/apps/backend/
-          tar -czf ondeacho-api.tar.gz -C pkg .
+          mkdir -p pkg-api/apps/backend
+          cp package.json package-lock.json pkg-api/
+          cp -r node_modules pkg-api/
+          cp apps/backend/package.json pkg-api/apps/backend/
+          cp -r apps/backend/dist pkg-api/apps/backend/
+          tar -czf ondeacho-api.tar.gz -C pkg-api .
 
-      - name: Prepare systemd service
+      - name: Empacotar site (apps/web)
+        run: |
+          set -e
+          mkdir -p pkg-web/apps/web
+          cp package.json package-lock.json pkg-web/
+          cp -r node_modules pkg-web/
+          cp apps/web/package.json pkg-web/apps/web/
+          cp apps/web/next.config.js pkg-web/apps/web/
+          if [ -f apps/web/middleware.ts ]; then cp apps/web/middleware.ts pkg-web/apps/web/; fi
+          if [ -d apps/web/public ]; then cp -r apps/web/public pkg-web/apps/web/; fi
+          cp -r apps/web/.next-build pkg-web/apps/web/
+          tar -czf ondeacho-web.tar.gz -C pkg-web .
+
+      - name: Unit files systemd (API + site)
         run: |
           cat > ondeacho-api.service <<EOF
           [Unit]
@@ -150,18 +217,39 @@ jobs:
           WantedBy=multi-user.target
           EOF
 
-      - name: Upload package to VPS
+          REMOTE_WEB="${{ env.REMOTE_DIR_WEB }}"
+          PORT_WEB="${{ env.WEB_PORT }}"
+          cat > ondeacho-web.service <<EOF
+          [Unit]
+          Description=OndeAcho site público (Next.js)
+          After=network.target
+
+          [Service]
+          Type=simple
+          WorkingDirectory=${REMOTE_WEB}/current/apps/web
+          ExecStart=/usr/bin/node ${REMOTE_WEB}/current/node_modules/next/dist/bin/next start -H 0.0.0.0 -p ${PORT_WEB}
+          Restart=always
+          RestartSec=5
+          KillSignal=SIGINT
+          SyslogIdentifier=ondeacho-web
+          Environment=NODE_ENV=production
+
+          [Install]
+          WantedBy=multi-user.target
+          EOF
+
+      - name: Upload artefactos para VPS
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.VPS_SSH_HOST }}
           username: ${{ secrets.VPS_SSH_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
           port: 22
-          source: "ondeacho-api.tar.gz,ondeacho-api.service"
-          target: "/tmp/deploy-${{ github.run_id }}"
+          source: "ondeacho-api.tar.gz,ondeacho-web.tar.gz,ondeacho-api.service,ondeacho-web.service"
+          target: "/tmp/deploy-prod-${{ github.run_id }}"
           overwrite: true
 
-      - name: Deploy on VPS
+      - name: Deploy na VPS — migrações, API, site, restarts
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.VPS_SSH_HOST }}
@@ -170,52 +258,72 @@ jobs:
           port: 22
           script_stop: true
           script: |
-            set -e
+            set -eu
 
-            SERVICE_NAME="${{ env.SERVICE_NAME_API }}"
-            REMOTE_DIR="${{ env.REMOTE_DIR_API }}"
-            RUN_DIR="/tmp/deploy-${{ github.run_id }}"
-            TAR="$RUN_DIR/ondeacho-api.tar.gz"
             COMMIT="${{ github.sha }}"
-            echo "Criando estrutura de pastas..."
-            sudo mkdir -p "$REMOTE_DIR/releases"
+            RUN_DIR="/tmp/deploy-prod-${{ github.run_id }}"
+            API_REMOTE="${{ env.REMOTE_DIR_API }}"
+            WEB_REMOTE="${{ env.REMOTE_DIR_WEB }}"
+            SERVICE_API="${{ env.SERVICE_NAME_API }}"
+            SERVICE_WEB="${{ env.SERVICE_NAME_WEB }}"
+            API_PORT_FALLBACK="${{ env.API_PORT }}"
+            WEB_PORT="${{ env.WEB_PORT }}"
 
-            RELEASE_DIR="$REMOTE_DIR/releases/$COMMIT"
-            sudo rm -rf "$RELEASE_DIR"
-            sudo mkdir -p "$RELEASE_DIR"
+            TAR_API="$RUN_DIR/ondeacho-api.tar.gz"
+            TAR_WEB="$RUN_DIR/ondeacho-web.tar.gz"
+            test -f "$TAR_API"
+            test -f "$TAR_WEB"
 
-            echo "Extraindo nova versão..."
-            sudo tar -xzf "$TAR" -C "$RELEASE_DIR"
+            echo "=== API: extrair release ==="
+            sudo mkdir -p "$API_REMOTE/releases"
+            RELEASE_API="$API_REMOTE/releases/$COMMIT"
+            sudo rm -rf "$RELEASE_API"
+            sudo mkdir -p "$RELEASE_API"
+            sudo tar -xzf "$TAR_API" -C "$RELEASE_API"
+            test -f "$RELEASE_API/apps/backend/dist/main.js"
+            test -f "$RELEASE_API/apps/backend/dist/database/migrate.js"
 
-            echo "Validando artefato publicado..."
-            test -f "$RELEASE_DIR/apps/backend/dist/main.js"
-
-            echo "Atualizando symlink current..."
-            sudo ln -sfn "$RELEASE_DIR" "$REMOTE_DIR/current"
-
-            echo "Atualizando serviço systemd..."
-            sudo cp "$RUN_DIR/ondeacho-api.service" "/etc/systemd/system/$SERVICE_NAME.service"
-
-            echo "Validando arquivo de ambiente..."
+            echo "=== Migrações (Node 20 --env-file) ==="
             sudo test -f /etc/ondeacho-api.env
+            sudo /usr/bin/node --env-file=/etc/ondeacho-api.env "$RELEASE_API/apps/backend/dist/database/migrate.js"
 
-            echo "Recarregando systemd..."
+            echo "=== API: symlink + systemd + restart ==="
+            sudo ln -sfn "$RELEASE_API" "$API_REMOTE/current"
+            sudo cp "$RUN_DIR/ondeacho-api.service" "/etc/systemd/system/$SERVICE_API.service"
             sudo systemctl daemon-reload
-            sudo systemctl enable "$SERVICE_NAME"
-            sudo systemctl restart "$SERVICE_NAME"
-
-            echo "Aguardando aplicação subir..."
+            sudo systemctl enable "$SERVICE_API"
+            sudo systemctl restart "$SERVICE_API"
             sleep 8
-
-            echo "Status do serviço:"
-            sudo systemctl status "$SERVICE_NAME" --no-pager -l
-
-            echo "Testando health local..."
+            sudo systemctl status "$SERVICE_API" --no-pager -l
             API_PORT="$(grep -E '^[[:space:]]*PORT=' /etc/ondeacho-api.env | head -1 | cut -d= -f2- | tr -d '\r' | tr -d '[:space:]')"
-            if [ -z "$API_PORT" ]; then API_PORT="${{ env.API_PORT }}"; fi
+            if [ -z "$API_PORT" ]; then API_PORT="$API_PORT_FALLBACK"; fi
             curl -fsS "http://127.0.0.1:${API_PORT}/api/v1/health" > /dev/null
 
-            echo "Deploy da API concluído com sucesso"
+            echo "=== Site: extrair release ==="
+            sudo mkdir -p "$WEB_REMOTE/releases"
+            RELEASE_WEB="$WEB_REMOTE/releases/$COMMIT"
+            sudo rm -rf "$RELEASE_WEB"
+            sudo mkdir -p "$RELEASE_WEB"
+            sudo tar -xzf "$TAR_WEB" -C "$RELEASE_WEB"
+            test -f "$RELEASE_WEB/apps/web/.next-build/BUILD_ID"
+            test -f "$RELEASE_WEB/apps/web/next.config.js"
+            test -f "$RELEASE_WEB/node_modules/next/dist/bin/next"
+
+            echo "=== Site: symlink + systemd + restart ==="
+            sudo ln -sfn "$RELEASE_WEB" "$WEB_REMOTE/current"
+            sudo cp "$RUN_DIR/ondeacho-web.service" "/etc/systemd/system/$SERVICE_WEB.service"
+            sudo systemctl daemon-reload
+            sudo systemctl enable "$SERVICE_WEB"
+            sudo systemctl restart "$SERVICE_WEB"
+            sleep 12
+            sudo systemctl status "$SERVICE_WEB" --no-pager -l || true
+            curl -fsS -o /dev/null "http://127.0.0.1:${WEB_PORT}/login" || {
+              echo "::error::Health do site (curl /login) falhou"
+              sudo journalctl -u "$SERVICE_WEB" -n 80 --no-pager
+              exit 1
+            }
+
+            echo "=== Deploy produção concluído (API + migrações + site) ==="
 
   deploy-admin:
     needs: [ci-node, ci-mobile, paths]
@@ -373,160 +481,3 @@ jobs:
             }
 
             echo "Deploy do admin concluído com sucesso"
-
-  deploy-web:
-    needs: [ci-node, ci-mobile, paths]
-    if: |
-      github.event_name == 'workflow_dispatch' ||
-      (github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master') && needs.paths.outputs.web == 'true')
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Resolve NEXT_PUBLIC_API_URL (site)
-        id: resolve_api_web
-        env:
-          FROM_VARS: ${{ vars.NEXT_PUBLIC_API_URL }}
-          FROM_SECRETS: ${{ secrets.NEXT_PUBLIC_API_URL }}
-          FROM_INPUT: ${{ github.event.inputs.next_public_api_url || '' }}
-          FALLBACK: ${{ env.DEFAULT_NEXT_PUBLIC_API_URL }}
-        run: |
-          set -euo pipefail
-          VAL=""
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ -n "${FROM_INPUT:-}" ]; then
-            VAL="${FROM_INPUT}"
-            SRC="workflow_dispatch input"
-          elif [ -n "${FROM_VARS:-}" ]; then
-            VAL="${FROM_VARS}"
-            SRC="vars.NEXT_PUBLIC_API_URL"
-          elif [ -n "${FROM_SECRETS:-}" ]; then
-            VAL="${FROM_SECRETS}"
-            SRC="secrets.NEXT_PUBLIC_API_URL"
-          else
-            VAL="${FALLBACK}"
-            SRC="same-origin /api/v1 (proxy Next → API)"
-          fi
-
-          echo "NEXT_PUBLIC_API_URL=${VAL}" >> "$GITHUB_ENV"
-          echo "::notice::NEXT_PUBLIC_API_URL (web build)=${VAL} (${SRC})"
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: "npm"
-
-      - name: Install dependencies
-        run: npm ci --include=dev
-
-      - name: Build site (apps/web)
-        env:
-          NODE_ENV: production
-        run: npm run build --workspace apps/web
-
-      - name: Prune devDependencies
-        run: npm prune --omit=dev
-
-      - name: Package release
-        run: |
-          set -e
-          mkdir -p pkg/apps/web
-          cp package.json package-lock.json pkg/
-          cp -r node_modules pkg/
-          cp apps/web/package.json pkg/apps/web/
-          cp apps/web/next.config.js pkg/apps/web/
-          if [ -d apps/web/public ]; then cp -r apps/web/public pkg/apps/web/; fi
-          cp -r apps/web/.next-build pkg/apps/web/
-          tar -czf ondeacho-web.tar.gz -C pkg .
-
-      - name: Prepare systemd service
-        run: |
-          REMOTE="${{ env.REMOTE_DIR_WEB }}"
-          PORT="${{ env.WEB_PORT }}"
-          cat > ondeacho-web.service <<EOF
-          [Unit]
-          Description=OndeAcho site público (Next.js)
-          After=network.target
-
-          [Service]
-          Type=simple
-          WorkingDirectory=${REMOTE}/current/apps/web
-          ExecStart=/usr/bin/node ${REMOTE}/current/node_modules/next/dist/bin/next start -H 0.0.0.0 -p ${PORT}
-          Restart=always
-          RestartSec=5
-          KillSignal=SIGINT
-          SyslogIdentifier=ondeacho-web
-          Environment=NODE_ENV=production
-
-          [Install]
-          WantedBy=multi-user.target
-          EOF
-
-      - name: Upload package to VPS
-        uses: appleboy/scp-action@v0.1.7
-        with:
-          host: ${{ secrets.VPS_SSH_HOST }}
-          username: ${{ secrets.VPS_SSH_USER }}
-          key: ${{ secrets.VPS_SSH_KEY }}
-          port: 22
-          source: "ondeacho-web.tar.gz,ondeacho-web.service"
-          target: "/tmp/deploy-web-${{ github.run_id }}"
-          overwrite: true
-
-      - name: Deploy on VPS
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.VPS_SSH_HOST }}
-          username: ${{ secrets.VPS_SSH_USER }}
-          key: ${{ secrets.VPS_SSH_KEY }}
-          port: 22
-          script_stop: true
-          script: |
-            set -e
-
-            SERVICE_NAME="${{ env.SERVICE_NAME_WEB }}"
-            REMOTE_DIR="${{ env.REMOTE_DIR_WEB }}"
-            RUN_DIR="/tmp/deploy-web-${{ github.run_id }}"
-            TAR="$RUN_DIR/ondeacho-web.tar.gz"
-            COMMIT="${{ github.sha }}"
-            WEB_PORT="${{ env.WEB_PORT }}"
-
-            echo "Criando estrutura de pastas..."
-            sudo mkdir -p "$REMOTE_DIR/releases"
-
-            RELEASE_DIR="$REMOTE_DIR/releases/$COMMIT"
-            sudo rm -rf "$RELEASE_DIR"
-            sudo mkdir -p "$RELEASE_DIR"
-
-            echo "Extraindo nova versão..."
-            sudo tar -xzf "$TAR" -C "$RELEASE_DIR"
-
-            echo "Validando artefato publicado..."
-            test -f "$RELEASE_DIR/apps/web/.next-build/BUILD_ID"
-            test -f "$RELEASE_DIR/apps/web/next.config.js"
-            test -f "$RELEASE_DIR/node_modules/next/dist/bin/next"
-
-            echo "Atualizando symlink current..."
-            sudo ln -sfn "$RELEASE_DIR" "$REMOTE_DIR/current"
-
-            echo "Atualizando serviço systemd..."
-            sudo cp "$RUN_DIR/ondeacho-web.service" "/etc/systemd/system/$SERVICE_NAME.service"
-
-            echo "Recarregando systemd..."
-            sudo systemctl daemon-reload
-            sudo systemctl enable "$SERVICE_NAME"
-            sudo systemctl restart "$SERVICE_NAME"
-
-            echo "Aguardando aplicação subir..."
-            sleep 12
-
-            echo "Status do serviço:"
-            sudo systemctl status "$SERVICE_NAME" --no-pager -l || true
-
-            echo "Testando HTTP local..."
-            curl -fsS -o /dev/null "http://127.0.0.1:${WEB_PORT}/login" || {
-              echo "::error::curl falhou; logs:"
-              sudo journalctl -u "$SERVICE_NAME" -n 80 --no-pager
-              exit 1
-            }
-
-            echo "Deploy do site (apps/web) concluído com sucesso"

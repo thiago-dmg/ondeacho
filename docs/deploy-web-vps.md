@@ -1,6 +1,8 @@
 # Deploy do site público na VPS (`ondeachotea.com`)
 
-Mesma ideia do [deploy do admin](./deploy-admin-vps.md): Next.js em **localhost:3002**, Nginx na **443** com HTTPS, domínio apontando para a VPS.
+**Deploy recomendado:** merge em `main` dispara o job **`deploy-production`** em [`.github/workflows/ci-deploy.yml`](../.github/workflows/ci-deploy.yml), que builda API + site, aplica **migrações**, publica e reinicia `ondeacho-api` e `ondeacho-web`. Guia completo: [deploy-acoes-github-producao.md](./deploy-acoes-github-producao.md).
+
+O resto desta página descreve o equivalente **manual** (Next em **localhost:3002**, Nginx na **443**), útil para diagnóstico ou se ainda não usares Actions.
 
 ### Se o site em `ondeachotea.com` «não tem» o que o Git já tem (ex.: «Esqueci minha senha» no login, mapa ou redes na ficha)
 

@@ -11,5 +11,16 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/login", "/esqueci-senha", "/redefinir-senha", "/conta", "/clinicas", "/favoritos", "/sugerir", "/suporte", "/clinica/:path*"]
+  matcher: [
+    "/",
+    "/login",
+    "/esqueci-senha",
+    "/redefinir-senha",
+    "/conta",
+    "/clinicas",
+    "/favoritos",
+    "/sugerir",
+    "/suporte",
+    "/clinica/:path*"
+  ]
 };

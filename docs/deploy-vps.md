@@ -1,6 +1,6 @@
 # Deploy da API OndeAcho na VPS (GitHub Actions + systemd)
 
-O workflow [`.github/workflows/deploy-api-vps.yml`](../.github/workflows/deploy-api-vps.yml) publica o backend NestJS na VPS no mesmo estilo do BibleReader: pasta `releases/<commit>`, symlink `current` e serviço systemd.
+O workflow [`.github/workflows/ci-deploy.yml`](../.github/workflows/ci-deploy.yml) publica **API + migrações + site** na VPS (job `deploy-production`): pastas `releases/<commit>`, symlinks `current` e systemd. Resumo operacional: [deploy-acoes-github-producao.md](./deploy-acoes-github-producao.md).
 
 ## Secrets no GitHub (3)
 
