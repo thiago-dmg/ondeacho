@@ -10,7 +10,7 @@ O workflow é [`.github/workflows/ci-deploy.yml`](../.github/workflows/ci-deploy
 2. `npm run build --workspace apps/backend` e `npm run build --workspace apps/web` (com `NEXT_PUBLIC_*` resolvidos abaixo).
 3. `npm prune --omit=dev` e empacotamento de dois tarballs (API e site).
 4. Upload por SCP para `/tmp/deploy-prod/<run_id>/` na VPS.
-5. Na VPS: extrair API → **`node --env-file=/etc/ondeacho-api.env …/dist/database/migrate.js`** → symlink `current` da API → `systemctl restart ondeacho-api` → health HTTP.
+5. Na VPS: extrair API → **`systemd-run`** com **`EnvironmentFile=/etc/ondeacho-api.env`** (o mesmo mecanismo do unit `ondeacho-api`) a executar `node …/migrate.js` → symlink `current` da API → `systemctl restart ondeacho-api` → health HTTP.
 6. Extrair site → symlink `ondeacho-web` → `systemctl restart ondeacho-web` → `curl` em `/login`.
 
 Se **qualquer** passo falhar (build, migração, health), o job falha e o GitHub marca o run como vermelho — não há “deploy meio verde”.
@@ -19,7 +19,7 @@ Se **qualquer** passo falhar (build, migração, health), o job falha e o GitHub
 
 Isto continua a ser configuração de **infraestrutura**, feita uma vez:
 
-- **Node.js 20** em `/usr/bin/node` (o script de migração usa `node --env-file`, disponível no Node 20).
+- **Node.js 20** em `/usr/bin/node`. As migrações usam **`systemd-run`** com o mesmo **`EnvironmentFile`** que o serviço da API — evita que passwords com `#` ou outras regras diferentes de `node --env-file` quebrem só no passo de migrate.
 - Ficheiro **`/etc/ondeacho-api.env`** (root `600`) com todas as variáveis necessárias à API e à base de dados (ver secção seguinte). A esteira **não** cria este ficheiro por segurança.
 - **systemd** com unidades `ondeacho-api` e `ondeacho-web` (o deploy **sobrescreve** os unit files gerados a partir do repo em cada run — alinha com o CI).
 - **Nginx** (ou outro proxy) apenas com **`proxy_pass`** para `127.0.0.1:3002` (site) e `3000` (API). **Não** configures `location /_next/static` a apontar para pastas no disco: o Next serve esses ficheiros; um alias errado gera **404 nos chunks** e o site fica preso em “Carregando…”.
@@ -52,7 +52,7 @@ Usa `apps/backend/.env.example` como checklist. Em produção, atenção especia
 | `SENDGRID_FROM` | Remetente verificado no SendGrid. |
 | `SUPPORT_INBOX_EMAIL` | Opcional — caixa que recebe tickets de suporte. |
 
-Formato compatível com **`node --env-file`**: uma variável por linha `CHAVE=valor`. Valores com caracteres especiais: preferir aspas ou evitar quebras de linha; testa localmente com `node --env-file=/etc/ondeacho-api.env -e "console.log(process.env.DB_HOST)"`.
+Formato **`systemd` `EnvironmentFile`**: ver `systemd.exec(5)` — uma variável por linha `CHAVE=valor`; comentários com `#` no **início** da linha; valores com espaços ou `#` no meio podem precisar de aspas conforme a documentação do systemd. Se a API arranca com `systemctl start ondeacho-api` mas a esteira falhava no migrate com `28P01`, antes podia ser parsing distinto de `node --env-file`; agora migrate usa o mesmo `EnvironmentFile`. Se ainda falhar, a password em `/etc/ondeacho-api.env` não coincide com o Postgres (`DB_USER` / `DB_PASSWORD`).
 
 ## CI em pull requests
 

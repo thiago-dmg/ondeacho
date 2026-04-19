@@ -283,9 +283,12 @@ jobs:
             test -f "$RELEASE_API/apps/backend/dist/main.js"
             test -f "$RELEASE_API/apps/backend/dist/database/migrate.js"
 
-            echo "=== Migrações (Node 20 --env-file) ==="
+            echo "=== Migrações (mesmo EnvironmentFile que a API — evita divergência vs node --env-file) ==="
             sudo test -f /etc/ondeacho-api.env
-            sudo /usr/bin/node --env-file=/etc/ondeacho-api.env "$RELEASE_API/apps/backend/dist/database/migrate.js"
+            sudo systemd-run --wait --collect \
+              -p Type=exec \
+              -p EnvironmentFile=/etc/ondeacho-api.env \
+              /usr/bin/node "$RELEASE_API/apps/backend/dist/database/migrate.js"
 
             echo "=== API: symlink + systemd + restart ==="
             sudo ln -sfn "$RELEASE_API" "$API_REMOTE/current"
