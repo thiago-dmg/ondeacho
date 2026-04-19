@@ -28,6 +28,14 @@ const nextConfig = {
       { source: "/redefinir-Senha", destination: "/redefinir-senha", permanent: false }
     ];
   },
+  async headers() {
+    return [
+      {
+        source: "/redefinir-senha",
+        headers: [{ key: "Cache-Control", value: "private, no-store, must-revalidate" }]
+      }
+    ];
+  },
   async rewrites() {
     return [
       {

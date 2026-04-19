@@ -10,6 +10,10 @@ O repositório pode estar certo e **produção ainda a servir um build antigo** 
 
 Para **redes sociais** após gravar no admin: na base tem de existir a migração **`010_clinic_website_social.sql`**; a API tem de estar actualizada; o pedido `GET /listings/:id` não pode estar em cache antigo (o backend envia `Cache-Control: no-store` nas listagens).
 
+### Link «Redefinir senha» no e-mail: `ERR_TOO_MANY_REDIRECTS`
+
+Indica **redireccionamento em cadeia** (ex.: Nginx ou DNS a mandar `www` ↔ apex em ciclo). Garante **um único host canónico** (só `ondeachotea.com` **ou** só `www`, com um único salto 301) e que `PASSWORD_RESET_PUBLIC_URL` no `/etc/ondeacho-api.env` use **esse mesmo** host. A página `/redefinir-senha` é servida com **SSR** (`getServerSideProps`) e cabeçalhos `no-store` em `next.config.js` para evitar HTML antigo em cache.
+
 ## O que precisas na VPS (resumo)
 
 1. **Node 20** (igual ao admin / CI).

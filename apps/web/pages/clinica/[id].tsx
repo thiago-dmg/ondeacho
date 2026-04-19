@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { useRouter } from "next/router";
+import type { ReactNode } from "react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { SiteLayout } from "../../src/components/SiteLayout";
 import { StarRating } from "../../src/components/StarRating";
@@ -72,6 +73,112 @@ function facebookHref(raw: string | null | undefined): string | null {
     return null;
   }
   return `https://www.facebook.com/${h}`;
+}
+
+function SocialIconLink({ href, label, children }: { href: string; label: string; children: ReactNode }) {
+  return (
+    <a
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer"
+      aria-label={label}
+      title={label}
+      style={{
+        width: 44,
+        height: 44,
+        borderRadius: 12,
+        border: "1px solid rgba(13, 148, 136, 0.45)",
+        display: "inline-flex",
+        alignItems: "center",
+        justifyContent: "center",
+        color: "#0f766e",
+        background: "#fff",
+        textDecoration: "none",
+        boxSizing: "border-box",
+        transition: "background 0.15s ease, border-color 0.15s ease, transform 0.12s ease"
+      }}
+      onMouseEnter={(e) => {
+        e.currentTarget.style.background = "rgba(13, 148, 136, 0.08)";
+        e.currentTarget.style.borderColor = "#0d9488";
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.background = "#fff";
+        e.currentTarget.style.borderColor = "rgba(13, 148, 136, 0.45)";
+      }}
+    >
+      {children}
+    </a>
+  );
+}
+
+function IconGlobe() {
+  return (
+    <svg width={22} height={22} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden>
+      <circle cx="12" cy="12" r="10" />
+      <path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+    </svg>
+  );
+}
+
+function IconInstagram() {
+  return (
+    <svg width={22} height={22} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden>
+      <rect x="3" y="3" width="18" height="18" rx="5" />
+      <circle cx="12" cy="12" r="4" />
+      <circle cx="17.5" cy="6.5" r="1.5" fill="currentColor" stroke="none" />
+    </svg>
+  );
+}
+
+function IconFacebook() {
+  return (
+    <svg width={22} height={22} viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+      <path d="M13.5 22v-9h3l.45-3.5H13.5V7.8c0-1 .28-1.68 1.72-1.68h1.83V3.14A24.65 24.65 0 0 0 14.45 3c-2.65 0-4.45 1.62-4.45 4.6V9.5H7v3.5h3V22h3.5z" />
+    </svg>
+  );
+}
+
+function FavoriteHeartButton({
+  active,
+  disabled,
+  onClick,
+  title
+}: {
+  active: boolean;
+  disabled?: boolean;
+  onClick: () => void;
+  title: string;
+}) {
+  return (
+    <button
+      type="button"
+      disabled={disabled}
+      onClick={onClick}
+      aria-label={title}
+      aria-pressed={active}
+      title={title}
+      style={{
+        width: 48,
+        height: 48,
+        borderRadius: "50%",
+        padding: 0,
+        display: "inline-flex",
+        alignItems: "center",
+        justifyContent: "center",
+        border: active ? "none" : "2px solid rgba(13, 148, 136, 0.5)",
+        background: active ? "linear-gradient(135deg, #0d9488, #14b8a6)" : "#fff",
+        color: active ? "#fff" : "#0f766e",
+        cursor: disabled ? "not-allowed" : "pointer",
+        opacity: disabled ? 0.55 : 1,
+        boxShadow: active ? "0 6px 20px rgba(13, 148, 136, 0.35)" : "none",
+        transition: "transform 0.12s ease, box-shadow 0.15s ease"
+      }}
+    >
+      <svg width={26} height={26} viewBox="0 0 24 24" fill={active ? "currentColor" : "none"} stroke="currentColor" strokeWidth={2} aria-hidden>
+        <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+      </svg>
+    </button>
+  );
 }
 
 export default function ClinicaDetailPage() {
@@ -204,13 +311,33 @@ export default function ClinicaDetailPage() {
   return (
     <SiteLayout title={clinic.name} description={clinic.description ?? undefined}>
       <div className="container" style={{ paddingTop: 28, paddingBottom: 48 }}>
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 12, marginBottom: 20, alignItems: "center" }}>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 14, marginBottom: 20, alignItems: "center" }}>
           <Link href="/clinicas" className="muted" style={{ fontWeight: 600 }}>
             ← Voltar à lista
           </Link>
-          <button type="button" className="btn-ghost" onClick={() => void toggleFavorite()}>
-            {favoriteId ? "Remover dos favoritos" : "Salvar nos favoritos"}
-          </button>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+            <FavoriteHeartButton
+              active={Boolean(favoriteId)}
+              disabled={!token}
+              title={
+                !token
+                  ? "Entre para usar favoritos"
+                  : favoriteId
+                    ? "Remover dos favoritos"
+                    : "Salvar nos favoritos"
+              }
+              onClick={() => void toggleFavorite()}
+            />
+            {!token ? (
+              <span className="muted" style={{ fontSize: 14, maxWidth: 280, lineHeight: 1.45 }}>
+                Entre para guardar esta clínica nos favoritos.
+              </span>
+            ) : clinic.viewerIsOwner ? (
+              <span className="muted" style={{ fontSize: 14, maxWidth: 320, lineHeight: 1.45 }}>
+                Este é o teu perfil público — o coração marca a clínica nos teus favoritos, como na app.
+              </span>
+            ) : null}
+          </div>
         </div>
 
         <header style={{ marginBottom: 24 }}>
@@ -261,11 +388,16 @@ export default function ClinicaDetailPage() {
             </div>
             <div
               style={{
-                marginTop: 14,
+                marginTop: 12,
                 width: "100%",
-                aspectRatio: "16 / 10",
-                minHeight: 260,
-                background: "var(--color-surface-muted, #e8f4f2)"
+                maxWidth: 560,
+                marginLeft: "auto",
+                marginRight: "auto",
+                aspectRatio: "2 / 1",
+                minHeight: 140,
+                maxHeight: 200,
+                background: "var(--color-surface-muted, #e8f4f2)",
+                borderRadius: "0 0 12px 12px"
               }}
             >
               <iframe
@@ -323,46 +455,54 @@ export default function ClinicaDetailPage() {
               return (
                 <div style={{ marginTop: 20, paddingTop: 18, borderTop: "1px solid var(--color-divider)" }}>
                   <h3 style={{ fontSize: 15, margin: "0 0 12px", fontWeight: 700 }}>Site e redes</h3>
-                  <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 10, alignItems: "center" }}>
                     {site ? (
-                      <a
-                        href={site}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="btn-ghost"
-                        style={{ textDecoration: "none", fontWeight: 600 }}
-                      >
-                        Site
-                      </a>
+                      <SocialIconLink href={site} label="Abrir site no navegador">
+                        <IconGlobe />
+                      </SocialIconLink>
                     ) : null}
                     {ig ? (
-                      <a
-                        href={ig}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="btn-ghost"
-                        style={{ textDecoration: "none", fontWeight: 600 }}
-                      >
-                        Instagram
-                      </a>
+                      <SocialIconLink href={ig} label="Abrir Instagram">
+                        <IconInstagram />
+                      </SocialIconLink>
                     ) : null}
                     {fb ? (
-                      <a
-                        href={fb}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="btn-ghost"
-                        style={{ textDecoration: "none", fontWeight: 600 }}
-                      >
-                        Facebook
-                      </a>
+                      <SocialIconLink href={fb} label="Abrir Facebook">
+                        <IconFacebook />
+                      </SocialIconLink>
                     ) : null}
                   </div>
                 </div>
               );
             })()}
 
-            {token ? (
+            {token && clinic.viewerIsOwner ? (
+              <div
+                style={{
+                  marginTop: 18,
+                  padding: "18px 16px",
+                  borderRadius: 12,
+                  background: "rgba(13, 148, 136, 0.07)",
+                  border: "1px solid rgba(13, 148, 136, 0.22)"
+                }}
+              >
+                <p style={{ margin: 0, fontSize: 15, lineHeight: 1.55, color: "#134e4a" }}>
+                  <strong>Olá!</strong> Este é o perfil público da tua clínica. Os contactos e redes aparecem para
+                  quem visita o OndeAcho; para editar dados usa o painel ou a app. Aqui o mais útil é marcares a tua
+                  própria clínica nos favoritos (coração em cima ou abaixo), como na app.
+                </p>
+                <div style={{ display: "flex", alignItems: "center", gap: 14, marginTop: 16, flexWrap: "wrap" }}>
+                  <FavoriteHeartButton
+                    active={Boolean(favoriteId)}
+                    title={favoriteId ? "Remover dos favoritos" : "Adicionar a favoritos"}
+                    onClick={() => void toggleFavorite()}
+                  />
+                  <span className="muted" style={{ fontSize: 14, lineHeight: 1.45, maxWidth: 240 }}>
+                    {favoriteId ? "Já está nos teus favoritos." : "Toca no coração para adicionar aos favoritos."}
+                  </span>
+                </div>
+              </div>
+            ) : token ? (
               <div style={{ display: "flex", flexWrap: "wrap", gap: 10, marginTop: 16 }}>
                 {wa ? (
                   <button type="button" className="btn-primary" onClick={() => void sendContact("whatsapp")}>

@@ -1,8 +1,14 @@
+import type { GetServerSideProps } from "next";
 import { FormEvent, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { SiteLayout } from "../src/components/SiteLayout";
 import { apiRequest } from "../src/lib/api";
+
+/** Evita HTML estático em CDN/proxy; cada pedido com ?token=… é tratado no servidor. */
+export const getServerSideProps: GetServerSideProps = async () => {
+  return { props: {} };
+};
 
 export default function RedefinirSenhaPage() {
   const router = useRouter();
