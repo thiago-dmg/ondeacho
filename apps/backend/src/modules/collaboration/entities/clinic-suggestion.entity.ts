@@ -1,4 +1,5 @@
 import { Column, CreateDateColumn, Entity, PrimaryGeneratedColumn, UpdateDateColumn } from "typeorm";
+import { ProfessionalSuggestionAttendance } from "../enums/professional-suggestion-attendance.enum";
 import { ReviewStatus } from "../enums/review-status.enum";
 import { SuggestionTargetType } from "../enums/suggestion-target-type.enum";
 
@@ -27,6 +28,16 @@ export class ClinicSuggestionEntity {
 
   @Column({ name: "address_line", type: "varchar", length: 200, nullable: true })
   addressLine!: string | null;
+
+  /** Nome da clínica onde o profissional atende (texto livre; sugestão targetType = profissional). */
+  @Column({ name: "linked_clinic_name", type: "varchar", length: 200, nullable: true })
+  linkedClinicName!: string | null;
+
+  @Column({ name: "professional_crm", type: "varchar", length: 80, nullable: true })
+  professionalCrm!: string | null;
+
+  @Column({ name: "professional_attendance", type: "varchar", length: 40, nullable: true })
+  professionalAttendance!: ProfessionalSuggestionAttendance | null;
 
   @Column({ type: "varchar", length: 20, nullable: true })
   phone!: string | null;

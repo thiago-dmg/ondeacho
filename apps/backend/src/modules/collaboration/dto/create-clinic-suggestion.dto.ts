@@ -1,6 +1,7 @@
 import { ApiProperty } from "@nestjs/swagger";
 import { Type } from "class-transformer";
-import { IsArray, IsIn, IsOptional, IsString, MaxLength, MinLength } from "class-validator";
+import { IsArray, IsIn, IsOptional, IsString, MaxLength, MinLength, ValidateIf } from "class-validator";
+import { ProfessionalSuggestionAttendance } from "../enums/professional-suggestion-attendance.enum";
 import { SuggestionTargetType } from "../enums/suggestion-target-type.enum";
 
 export class CreateClinicSuggestionDto {
@@ -31,6 +32,30 @@ export class CreateClinicSuggestionDto {
   @IsString()
   @MaxLength(200)
   addressLine?: string;
+
+  @ApiProperty({
+    required: false,
+    enum: ProfessionalSuggestionAttendance,
+    description: "Obrigatório para profissional no cliente actual; se omitido, assume other_location."
+  })
+  @ValidateIf((o) => o.targetType === SuggestionTargetType.PROFESSIONAL)
+  @IsOptional()
+  @IsIn(Object.values(ProfessionalSuggestionAttendance))
+  professionalAttendance?: ProfessionalSuggestionAttendance;
+
+  @ApiProperty({ required: false, description: "Nome da clínica onde atende (profissional em clínica de terceiros)." })
+  @ValidateIf((o) => o.targetType === SuggestionTargetType.PROFESSIONAL)
+  @IsOptional()
+  @IsString()
+  @MaxLength(200)
+  linkedClinicName?: string;
+
+  @ApiProperty({ required: false, description: "CRM ou registro profissional, se aplicável." })
+  @ValidateIf((o) => o.targetType === SuggestionTargetType.PROFESSIONAL)
+  @IsOptional()
+  @IsString()
+  @MaxLength(80)
+  professionalCrm?: string;
 
   @ApiProperty({ required: false })
   @IsOptional()

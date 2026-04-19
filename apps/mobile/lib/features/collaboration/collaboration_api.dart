@@ -13,27 +13,37 @@ class CollaborationApi {
     required String city,
     String? neighborhood,
     String? addressLine,
+    String? professionalAttendance,
+    String? linkedClinicName,
+    String? professionalCrm,
     String? phone,
     String? whatsappPhone,
     List<String>? specialtyNames,
     List<String>? insuranceNames,
     String? observations
   }) async {
-    await _dio.post(
-      "/clinic-suggestions",
-      data: {
-        "targetType": targetType,
-        "name": name,
-        "city": city,
-        "neighborhood": neighborhood,
-        "addressLine": addressLine,
-        "phone": phone,
-        "whatsappPhone": whatsappPhone,
-        "specialtyNames": specialtyNames ?? [],
-        "insuranceNames": insuranceNames ?? [],
-        "observations": observations
-      }
-    );
+    final data = <String, dynamic>{
+      "targetType": targetType,
+      "name": name,
+      "city": city,
+      "neighborhood": neighborhood,
+      "addressLine": addressLine,
+      "phone": phone,
+      "whatsappPhone": whatsappPhone,
+      "specialtyNames": specialtyNames ?? [],
+      "insuranceNames": insuranceNames ?? [],
+      "observations": observations
+    };
+    if (professionalAttendance != null) {
+      data["professionalAttendance"] = professionalAttendance;
+    }
+    if (linkedClinicName != null) {
+      data["linkedClinicName"] = linkedClinicName;
+    }
+    if (professionalCrm != null) {
+      data["professionalCrm"] = professionalCrm;
+    }
+    await _dio.post("/clinic-suggestions", data: data);
   }
 
   Future<void> claimProfile({

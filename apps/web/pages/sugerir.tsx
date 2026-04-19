@@ -1,9 +1,17 @@
 import Link from "next/link";
 import { useRouter } from "next/router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { SiteLayout } from "../src/components/SiteLayout";
 import { apiRequest } from "../src/lib/api";
 import { useAuth } from "../src/lib/auth-context";
+
+const PROFESSIONAL_ATTENDANCE = {
+  at_clinic: "at_clinic",
+  own_office: "own_office",
+  other_location: "other_location"
+} as const;
+
+type ProfessionalAttendance = (typeof PROFESSIONAL_ATTENDANCE)[keyof typeof PROFESSIONAL_ATTENDANCE];
 
 function parseList(value: string): string[] {
   return value
@@ -16,7 +24,12 @@ export default function SugerirPage() {
   const { token } = useAuth();
   const router = useRouter();
   const [targetType, setTargetType] = useState<"clinica" | "profissional">("clinica");
+  const [professionalAttendance, setProfessionalAttendance] = useState<ProfessionalAttendance>(
+    PROFESSIONAL_ATTENDANCE.at_clinic
+  );
   const [name, setName] = useState("");
+  const [professionalCrm, setProfessionalCrm] = useState("");
+  const [linkedClinicName, setLinkedClinicName] = useState("");
   const [city, setCity] = useState("");
   const [neighborhood, setNeighborhood] = useState("");
   const [addressLine, setAddressLine] = useState("");
@@ -29,6 +42,17 @@ export default function SugerirPage() {
   const [done, setDone] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
+  const showProfessionalAddress =
+    targetType === "profissional" &&
+    (professionalAttendance === PROFESSIONAL_ATTENDANCE.own_office ||
+      professionalAttendance === PROFESSIONAL_ATTENDANCE.other_location);
+
+  useEffect(() => {
+    if (targetType === "clinica") {
+      setProfessionalAttendance(PROFESSIONAL_ATTENDANCE.at_clinic);
+    }
+  }, [targetType]);
+
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!token) {
@@ -38,20 +62,32 @@ export default function SugerirPage() {
     setError(null);
     setSubmitting(true);
     try {
+      const base = {
+        targetType,
+        name: name.trim(),
+        city: city.trim(),
+        neighborhood: neighborhood.trim() || undefined,
+        addressLine: addressLine.trim() || undefined,
+        phone: phone.trim() || undefined,
+        whatsappPhone: whatsappPhone.trim() || undefined,
+        specialtyNames: parseList(specialties),
+        insuranceNames: parseList(insurances),
+        observations: observations.trim() || undefined
+      };
+
+      const body =
+        targetType === "profissional"
+          ? {
+              ...base,
+              professionalAttendance,
+              linkedClinicName: linkedClinicName.trim() || undefined,
+              professionalCrm: professionalCrm.trim() || undefined
+            }
+          : base;
+
       await apiRequest("/clinic-suggestions", {
         method: "POST",
-        body: JSON.stringify({
-          targetType,
-          name: name.trim(),
-          city: city.trim(),
-          neighborhood: neighborhood.trim() || undefined,
-          addressLine: addressLine.trim() || undefined,
-          phone: phone.trim() || undefined,
-          whatsappPhone: whatsappPhone.trim() || undefined,
-          specialtyNames: parseList(specialties),
-          insuranceNames: parseList(insurances),
-          observations: observations.trim() || undefined
-        })
+        body: JSON.stringify(body)
       });
       setDone(true);
     } catch (err) {
@@ -104,42 +140,29 @@ export default function SugerirPage() {
                 <option value="profissional">Profissional</option>
               </select>
             </label>
+
             <label style={{ display: "block", marginBottom: 16 }}>
               <span className="muted" style={{ display: "block", marginBottom: 6, fontSize: 13 }}>
                 Nome *
               </span>
               <input className="input" value={name} onChange={(e) => setName(e.target.value)} required minLength={3} />
             </label>
-            <label style={{ display: "block", marginBottom: 16 }}>
-              <span className="muted" style={{ display: "block", marginBottom: 6, fontSize: 13 }}>
-                Cidade *
-              </span>
-              <input className="input" value={city} onChange={(e) => setCity(e.target.value)} required minLength={2} />
-            </label>
-            <label style={{ display: "block", marginBottom: 16 }}>
-              <span className="muted" style={{ display: "block", marginBottom: 6, fontSize: 13 }}>
-                Bairro
-              </span>
-              <input className="input" value={neighborhood} onChange={(e) => setNeighborhood(e.target.value)} />
-            </label>
-            <label style={{ display: "block", marginBottom: 16 }}>
-              <span className="muted" style={{ display: "block", marginBottom: 6, fontSize: 13 }}>
-                Endereço
-              </span>
-              <input className="input" value={addressLine} onChange={(e) => setAddressLine(e.target.value)} />
-            </label>
-            <label style={{ display: "block", marginBottom: 16 }}>
-              <span className="muted" style={{ display: "block", marginBottom: 6, fontSize: 13 }}>
-                Telefone
-              </span>
-              <input className="input" value={phone} onChange={(e) => setPhone(e.target.value)} />
-            </label>
-            <label style={{ display: "block", marginBottom: 16 }}>
-              <span className="muted" style={{ display: "block", marginBottom: 6, fontSize: 13 }}>
-                WhatsApp
-              </span>
-              <input className="input" value={whatsappPhone} onChange={(e) => setWhatsappPhone(e.target.value)} />
-            </label>
+
+            {targetType === "profissional" ? (
+              <label style={{ display: "block", marginBottom: 16 }}>
+                <span className="muted" style={{ display: "block", marginBottom: 6, fontSize: 13 }}>
+                  CRM ou registro profissional (opcional)
+                </span>
+                <input
+                  className="input"
+                  value={professionalCrm}
+                  onChange={(e) => setProfessionalCrm(e.target.value)}
+                  placeholder="Ex.: CRM-SP 123456"
+                  maxLength={80}
+                />
+              </label>
+            ) : null}
+
             <label style={{ display: "block", marginBottom: 16 }}>
               <span className="muted" style={{ display: "block", marginBottom: 6, fontSize: 13 }}>
                 Especialidades (separadas por vírgula)
@@ -157,6 +180,117 @@ export default function SugerirPage() {
               </span>
               <input className="input" value={insurances} onChange={(e) => setInsurances(e.target.value)} />
             </label>
+
+            {targetType === "profissional" ? (
+              <fieldset style={{ border: "none", margin: "0 0 16px", padding: 0 }}>
+                <legend className="muted" style={{ fontSize: 13, marginBottom: 8, padding: 0 }}>
+                  Onde atende? *
+                </legend>
+                <label style={{ display: "flex", alignItems: "flex-start", gap: 8, marginBottom: 10, cursor: "pointer" }}>
+                  <input
+                    type="radio"
+                    name="attendance"
+                    checked={professionalAttendance === PROFESSIONAL_ATTENDANCE.at_clinic}
+                    onChange={() => setProfessionalAttendance(PROFESSIONAL_ATTENDANCE.at_clinic)}
+                  />
+                  <span>
+                    Em clínica ou consultório de terceiros
+                    <span className="muted" style={{ display: "block", fontSize: 12, marginTop: 2 }}>
+                      Não pedimos endereço completo do profissional; use o nome da clínica abaixo, se souber.
+                    </span>
+                  </span>
+                </label>
+                <label style={{ display: "flex", alignItems: "flex-start", gap: 8, marginBottom: 10, cursor: "pointer" }}>
+                  <input
+                    type="radio"
+                    name="attendance"
+                    checked={professionalAttendance === PROFESSIONAL_ATTENDANCE.own_office}
+                    onChange={() => setProfessionalAttendance(PROFESSIONAL_ATTENDANCE.own_office)}
+                  />
+                  <span>
+                    Consultório próprio
+                    <span className="muted" style={{ display: "block", fontSize: 12, marginTop: 2 }}>
+                      Pode informar endereço completo abaixo (opcional, mas ajuda no mapa).
+                    </span>
+                  </span>
+                </label>
+                <label style={{ display: "flex", alignItems: "flex-start", gap: 8, cursor: "pointer" }}>
+                  <input
+                    type="radio"
+                    name="attendance"
+                    checked={professionalAttendance === PROFESSIONAL_ATTENDANCE.other_location}
+                    onChange={() => setProfessionalAttendance(PROFESSIONAL_ATTENDANCE.other_location)}
+                  />
+                  <span>
+                    Outro local ou sem vínculo fixo com clínica
+                    <span className="muted" style={{ display: "block", fontSize: 12, marginTop: 2 }}>
+                      Endereço completo opcional, se quiser indicar onde costuma atender.
+                    </span>
+                  </span>
+                </label>
+
+                {professionalAttendance === PROFESSIONAL_ATTENDANCE.at_clinic ? (
+                  <label style={{ display: "block", marginTop: 14 }}>
+                    <span className="muted" style={{ display: "block", marginBottom: 6, fontSize: 13 }}>
+                      Nome da clínica ou centro (opcional)
+                    </span>
+                    <input
+                      className="input"
+                      value={linkedClinicName}
+                      onChange={(e) => setLinkedClinicName(e.target.value)}
+                      placeholder="Ex.: Clínica Esperança"
+                      maxLength={200}
+                    />
+                  </label>
+                ) : null}
+              </fieldset>
+            ) : null}
+
+            <label style={{ display: "block", marginBottom: 16 }}>
+              <span className="muted" style={{ display: "block", marginBottom: 6, fontSize: 13 }}>
+                Cidade *
+              </span>
+              <input className="input" value={city} onChange={(e) => setCity(e.target.value)} required minLength={2} />
+            </label>
+            <label style={{ display: "block", marginBottom: 16 }}>
+              <span className="muted" style={{ display: "block", marginBottom: 6, fontSize: 13 }}>
+                Bairro (opcional)
+              </span>
+              <input className="input" value={neighborhood} onChange={(e) => setNeighborhood(e.target.value)} />
+            </label>
+
+            {targetType === "clinica" || showProfessionalAddress ? (
+              <label style={{ display: "block", marginBottom: 16 }}>
+                <span className="muted" style={{ display: "block", marginBottom: 6, fontSize: 13 }}>
+                  {targetType === "clinica" ? "Endereço (rua e número)" : "Endereço completo (opcional)"}
+                </span>
+                <input
+                  className="input"
+                  value={addressLine}
+                  onChange={(e) => setAddressLine(e.target.value)}
+                  placeholder={targetType === "clinica" ? "Para localização e busca no mapa" : "Se quiser aparecer no mapa ou facilitar a verificação"}
+                />
+                {targetType === "clinica" ? (
+                  <span className="muted" style={{ display: "block", marginTop: 6, fontSize: 12 }}>
+                    Quanto mais completo, melhor para famílias encontrarem o local.
+                  </span>
+                ) : null}
+              </label>
+            ) : null}
+
+            <label style={{ display: "block", marginBottom: 16 }}>
+              <span className="muted" style={{ display: "block", marginBottom: 6, fontSize: 13 }}>
+                Telefone
+              </span>
+              <input className="input" value={phone} onChange={(e) => setPhone(e.target.value)} />
+            </label>
+            <label style={{ display: "block", marginBottom: 16 }}>
+              <span className="muted" style={{ display: "block", marginBottom: 6, fontSize: 13 }}>
+                WhatsApp
+              </span>
+              <input className="input" value={whatsappPhone} onChange={(e) => setWhatsappPhone(e.target.value)} />
+            </label>
+
             <label style={{ display: "block", marginBottom: 20 }}>
               <span className="muted" style={{ display: "block", marginBottom: 6, fontSize: 13 }}>
                 Observações

@@ -4,7 +4,9 @@ import { Repository } from "typeorm";
 import { UserEntity } from "../users/entities/user.entity";
 import { CreateClinicSuggestionDto } from "./dto/create-clinic-suggestion.dto";
 import { ClinicSuggestionEntity } from "./entities/clinic-suggestion.entity";
+import { ProfessionalSuggestionAttendance } from "./enums/professional-suggestion-attendance.enum";
 import { ReviewStatus } from "./enums/review-status.enum";
+import { SuggestionTargetType } from "./enums/suggestion-target-type.enum";
 
 @Injectable()
 export class ClinicSuggestionsService {
@@ -21,6 +23,24 @@ export class ClinicSuggestionsService {
       throw new BadRequestException("Usuário inválido para sugestão.");
     }
 
+    let addressLine = dto.addressLine?.trim() || null;
+    let linkedClinicName = dto.linkedClinicName?.trim() || null;
+    let professionalCrm = dto.professionalCrm?.trim() || null;
+    let professionalAttendance = dto.professionalAttendance ?? null;
+
+    if (dto.targetType === SuggestionTargetType.CLINIC) {
+      linkedClinicName = null;
+      professionalCrm = null;
+      professionalAttendance = null;
+    } else {
+      if (!professionalAttendance) {
+        professionalAttendance = ProfessionalSuggestionAttendance.OTHER_LOCATION;
+      }
+      if (professionalAttendance === ProfessionalSuggestionAttendance.AT_CLINIC) {
+        addressLine = null;
+      }
+    }
+
     const suggestion = this.suggestionsRepository.create({
       suggestedByUserId: userId,
       suggestedByName: user.name,
@@ -28,7 +48,10 @@ export class ClinicSuggestionsService {
       name: dto.name.trim(),
       city: dto.city.trim(),
       neighborhood: dto.neighborhood?.trim() || null,
-      addressLine: dto.addressLine?.trim() || null,
+      addressLine,
+      linkedClinicName,
+      professionalCrm,
+      professionalAttendance,
       phone: dto.phone?.trim() || null,
       whatsappPhone: dto.whatsappPhone?.trim() || null,
       specialtyNames: dto.specialtyNames?.map((item) => item.trim()).filter(Boolean) ?? [],

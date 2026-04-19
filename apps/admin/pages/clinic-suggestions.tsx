@@ -8,11 +8,28 @@ type Suggestion = {
   name: string;
   targetType: "clinica" | "profissional";
   city: string;
+  neighborhood?: string | null;
+  addressLine?: string | null;
   phone?: string | null;
+  whatsappPhone?: string | null;
+  professionalCrm?: string | null;
+  linkedClinicName?: string | null;
+  professionalAttendance?: "at_clinic" | "own_office" | "other_location" | null;
+  specialtyNames?: string[];
+  insuranceNames?: string[];
+  observations?: string | null;
   suggestedByName: string;
   status: "PENDENTE" | "APROVADA" | "REJEITADA";
   createdAt: string;
 };
+
+function attendanceLabel(a: Suggestion["professionalAttendance"]): string | null {
+  if (!a) return null;
+  if (a === "at_clinic") return "Em clínica ou consultório de terceiros";
+  if (a === "own_office") return "Consultório próprio";
+  if (a === "other_location") return "Outro local / sem vínculo fixo";
+  return null;
+}
 
 export default function ClinicSuggestionsPage() {
   const [items, setItems] = useState<Suggestion[]>([]);
@@ -78,8 +95,41 @@ export default function ClinicSuggestionsPage() {
             </div>
             <p className="oa-muted" style={{ margin: "0 0 8px" }}>
               {item.city}
+              {item.neighborhood ? ` · ${item.neighborhood}` : ""}
               {item.phone ? ` · ${item.phone}` : ""}
+              {item.whatsappPhone ? ` · WhatsApp ${item.whatsappPhone}` : ""}
             </p>
+            {item.targetType === "profissional" ? (
+              <div className="oa-muted" style={{ margin: "0 0 8px", fontSize: "0.9rem" }}>
+                {attendanceLabel(item.professionalAttendance) ? (
+                  <p style={{ margin: "0 0 4px" }}>Onde atende: {attendanceLabel(item.professionalAttendance)}</p>
+                ) : null}
+                {item.linkedClinicName ? (
+                  <p style={{ margin: "0 0 4px" }}>Clínica indicada: {item.linkedClinicName}</p>
+                ) : null}
+                {item.professionalCrm ? <p style={{ margin: "0 0 4px" }}>CRM / registro: {item.professionalCrm}</p> : null}
+                {item.addressLine ? <p style={{ margin: 0 }}>Endereço: {item.addressLine}</p> : null}
+              </div>
+            ) : item.addressLine ? (
+              <p className="oa-muted" style={{ margin: "0 0 8px", fontSize: "0.9rem" }}>
+                Endereço: {item.addressLine}
+              </p>
+            ) : null}
+            {item.specialtyNames && item.specialtyNames.length > 0 ? (
+              <p className="oa-muted" style={{ margin: "0 0 4px", fontSize: "0.88rem" }}>
+                Especialidades: {item.specialtyNames.join(", ")}
+              </p>
+            ) : null}
+            {item.insuranceNames && item.insuranceNames.length > 0 ? (
+              <p className="oa-muted" style={{ margin: "0 0 8px", fontSize: "0.88rem" }}>
+                Convênios: {item.insuranceNames.join(", ")}
+              </p>
+            ) : null}
+            {item.observations ? (
+              <p className="oa-muted" style={{ margin: "0 0 8px", fontSize: "0.88rem", whiteSpace: "pre-wrap" }}>
+                Obs.: {item.observations}
+              </p>
+            ) : null}
             <p style={{ margin: "0 0 8px" }}>
               Sugerido por <strong>{item.suggestedByName}</strong>
             </p>

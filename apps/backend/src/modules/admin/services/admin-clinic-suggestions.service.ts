@@ -111,6 +111,7 @@ export class AdminClinicSuggestionsService {
           name: suggestion.name,
           city: suggestion.city,
           neighborhood: suggestion.neighborhood,
+          crm: suggestion.professionalCrm?.trim() || null,
           phone: suggestion.phone,
           whatsappPhone: suggestion.whatsappPhone,
           clinicId: null,
