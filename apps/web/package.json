@@ -1,0 +1,24 @@
+{
+  "name": "web",
+  "version": "1.0.0",
+  "description": "Site público OndeAcho — descoberta de clínicas TEA/TDAH.",
+  "private": true,
+  "scripts": {
+    "dev": "next dev -p 3002",
+    "clean": "node scripts/clean-next.js",
+    "build": "npm run clean && next build",
+    "start": "next start -p 3002",
+    "lint": "tsc --noEmit"
+  },
+  "dependencies": {
+    "next": "^13.5.11",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.17.30",
+    "@types/react": "^18.2.79",
+    "@types/react-dom": "^18.2.25",
+    "typescript": "^5.4.5"
+  }
+}

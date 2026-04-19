@@ -64,6 +64,9 @@ jobs:
       - name: Lint admin
         run: npm run lint:admin
 
+      - name: Lint web
+        run: npm run lint:web
+
   ci-mobile:
     runs-on: ubuntu-latest
     steps:

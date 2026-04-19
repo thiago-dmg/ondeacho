@@ -10,8 +10,10 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "dev:backend": "npm --workspace apps/backend run start:dev",
     "dev:admin": "npm --workspace apps/admin run dev",
+    "dev:web": "npm --workspace apps/web run dev",
     "lint:backend": "npm --workspace apps/backend run lint",
     "lint:admin": "npm --workspace apps/admin run lint",
+    "lint:web": "npm --workspace apps/web run lint",
     "docker:up": "docker compose up -d",
     "docker:down": "docker compose down",
     "docker:up:prod": "docker compose -f docker-compose.prod.yml up -d --build",
@@ -27,6 +29,7 @@
   "private": true,
   "workspaces": [
     "apps/backend",
-    "apps/admin"
+    "apps/admin",
+    "apps/web"
   ]
 }

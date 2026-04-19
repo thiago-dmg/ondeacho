@@ -11,6 +11,8 @@ class ClinicListing {
   final bool addedByCommunity;
   final bool isClaimed;
   final bool isVerified;
+  /// Quando o pedido traz `Authorization: Bearer` válido e o utilizador é proprietário aprovado em [profile_owners].
+  final bool viewerIsOwner;
   final double rating;
   /// Média das avaliações aprovadas no app (quando a API envia).
   final double? displayRating;
@@ -31,6 +33,7 @@ class ClinicListing {
     required this.addedByCommunity,
     required this.isClaimed,
     required this.isVerified,
+    this.viewerIsOwner = false,
     required this.rating,
     this.displayRating,
     this.displayReviewCount = 0,
@@ -61,6 +64,7 @@ class ClinicListing {
       addedByCommunity: json["addedByCommunity"] == true,
       isClaimed: json["isClaimed"] == true,
       isVerified: json["isVerified"] == true,
+      viewerIsOwner: json["viewerIsOwner"] == true,
       rating: double.tryParse(ratingValue?.toString() ?? "0") ?? 0,
       displayRating: json["displayRating"] != null
           ? double.tryParse(json["displayRating"].toString())

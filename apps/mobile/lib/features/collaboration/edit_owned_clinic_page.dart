@@ -32,6 +32,8 @@ class _EditOwnedClinicPageState extends ConsumerState<EditOwnedClinicPage> {
   late final TextEditingController _phoneController;
   late final TextEditingController _whatsappController;
   bool _loading = false;
+  /// Até confirmar em [clinicDetailProvider] que o utilizador é proprietário em `profile_owners`.
+  bool _ownerCheckPending = true;
 
   @override
   void initState() {
@@ -40,6 +42,32 @@ class _EditOwnedClinicPageState extends ConsumerState<EditOwnedClinicPage> {
     _addressController = TextEditingController(text: widget.addressLine ?? "");
     _phoneController = TextEditingController(text: widget.phone ?? "");
     _whatsappController = TextEditingController(text: widget.whatsappPhone ?? "");
+    WidgetsBinding.instance.addPostFrameCallback((_) => _ensureViewerIsOwner());
+  }
+
+  Future<void> _ensureViewerIsOwner() async {
+    try {
+      ref.invalidate(clinicDetailProvider(widget.clinicId));
+      final clinic = await ref.read(clinicDetailProvider(widget.clinicId).future);
+      if (!mounted) {
+        return;
+      }
+      if (!clinic.viewerIsOwner) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Sua conta não tem permissão para editar esta clínica."))
+        );
+        context.pop();
+        return;
+      }
+    } catch (_) {
+      if (mounted) {
+        context.pop();
+      }
+      return;
+    }
+    if (mounted) {
+      setState(() => _ownerCheckPending = false);
+    }
   }
 
   @override
@@ -84,6 +112,12 @@ class _EditOwnedClinicPageState extends ConsumerState<EditOwnedClinicPage> {
 
   @override
   Widget build(BuildContext context) {
+    if (_ownerCheckPending) {
+      return Scaffold(
+        appBar: AppBar(title: const Text("Editar clínica")),
+        body: const Center(child: CircularProgressIndicator())
+      );
+    }
     return Scaffold(
       appBar: AppBar(title: const Text("Editar clínica")),
       body: Form(

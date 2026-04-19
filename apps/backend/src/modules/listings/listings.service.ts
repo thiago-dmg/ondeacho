@@ -1,6 +1,8 @@
 import { Injectable, NotFoundException } from "@nestjs/common";
+import { JwtService } from "@nestjs/jwt";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Repository } from "typeorm";
+import { ProfileOwnerEntity } from "../collaboration/entities/profile-owner.entity";
 import { aggregateApprovedReviewsByClinicIds } from "../reviews/approved-review-aggregates";
 import { computeAppRating } from "../reviews/review-summary.util";
 import { ListingsFilterDto } from "./dto/listings-filter.dto";
@@ -16,8 +18,29 @@ export class ListingsService {
     @InjectRepository(ProfessionalEntity)
     private readonly professionalsRepository: Repository<ProfessionalEntity>,
     @InjectRepository(ReviewEntity)
-    private readonly reviewsRepository: Repository<ReviewEntity>
+    private readonly reviewsRepository: Repository<ReviewEntity>,
+    @InjectRepository(ProfileOwnerEntity)
+    private readonly profileOwnersRepository: Repository<ProfileOwnerEntity>,
+    private readonly jwtService: JwtService
   ) {}
+
+  private parseSubFromAuthorizationHeader(authorization?: string): string | null {
+    const raw = authorization?.trim();
+    if (!raw) {
+      return null;
+    }
+    const m = /^Bearer\s+(.+)$/i.exec(raw);
+    if (!m?.[1]) {
+      return null;
+    }
+    try {
+      const payload = this.jwtService.verify<{ sub?: string }>(m[1]);
+      const sub = payload.sub;
+      return typeof sub === "string" && sub.length > 0 ? sub : null;
+    } catch {
+      return null;
+    }
+  }
 
   async findAll(filters: ListingsFilterDto) {
     const qb = this.clinicsRepository
@@ -88,7 +111,7 @@ export class ListingsService {
     return enriched;
   }
 
-  async findOne(id: string) {
+  async findOne(id: string, authorization?: string) {
     const clinic = await this.clinicsRepository.findOne({
       where: { id },
       relations: { specialties: true, insurances: true }
@@ -105,9 +128,19 @@ export class ListingsService {
 
     const [enriched] = await this.attachDisplayRatings([clinic]);
 
+    const viewerUserId = this.parseSubFromAuthorizationHeader(authorization);
+    let viewerIsOwner = false;
+    if (viewerUserId) {
+      const ownership = await this.profileOwnersRepository.findOne({
+        where: { userId: viewerUserId, clinicId: id }
+      });
+      viewerIsOwner = !!ownership;
+    }
+
     return {
       ...enriched,
-      professionals
+      professionals,
+      viewerIsOwner
     };
   }
 }

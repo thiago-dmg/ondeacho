@@ -256,36 +256,38 @@ class _ListingDetailsPageState extends ConsumerState<ListingDetailsPage> {
                       )
                     )
                   ),
-                  const SizedBox(width: 10),
-                  PopupMenuButton<String>(
-                    tooltip: "Mais opções",
-                    icon: const LIcon(LucideIcons.moreHorizontal, size: 24),
-                    onSelected: (value) {
-                      if (value == "edit" && isLoggedIn) {
-                        context.push(
-                          "/owner/clinic/$listingId/edit"
-                          "?name=${Uri.encodeComponent(clinic.name)}"
-                          "&addressLine=${Uri.encodeComponent(clinic.addressLine ?? "")}"
-                          "&phone=${Uri.encodeComponent(clinic.phone ?? "")}"
-                          "&whatsappPhone=${Uri.encodeComponent(clinic.whatsappPhone ?? "")}"
-                        );
-                      }
-                      if (value == "claim" && !clinic.isClaimed) {
-                        context.push(
-                          "/claim/$listingId?name=${Uri.encodeComponent(clinic.name)}"
-                        );
-                      }
-                    },
-                    itemBuilder: (context) => [
-                      if (isLoggedIn)
-                        const PopupMenuItem(value: "edit", child: Text("Editar dados da clínica")),
-                      if (!clinic.isClaimed)
-                        const PopupMenuItem(
-                          value: "claim",
-                          child: Text("Sou responsável por esta clínica")
-                        )
-                    ]
-                  )
+                  if ((isLoggedIn && clinic.viewerIsOwner) || !clinic.isClaimed) ...[
+                    const SizedBox(width: 10),
+                    PopupMenuButton<String>(
+                      tooltip: "Mais opções",
+                      icon: const LIcon(LucideIcons.moreHorizontal, size: 24),
+                      onSelected: (value) {
+                        if (value == "edit" && isLoggedIn && clinic.viewerIsOwner) {
+                          context.push(
+                            "/owner/clinic/$listingId/edit"
+                            "?name=${Uri.encodeComponent(clinic.name)}"
+                            "&addressLine=${Uri.encodeComponent(clinic.addressLine ?? "")}"
+                            "&phone=${Uri.encodeComponent(clinic.phone ?? "")}"
+                            "&whatsappPhone=${Uri.encodeComponent(clinic.whatsappPhone ?? "")}"
+                          );
+                        }
+                        if (value == "claim" && !clinic.isClaimed) {
+                          context.push(
+                            "/claim/$listingId?name=${Uri.encodeComponent(clinic.name)}"
+                          );
+                        }
+                      },
+                      itemBuilder: (context) => [
+                        if (isLoggedIn && clinic.viewerIsOwner)
+                          const PopupMenuItem(value: "edit", child: Text("Editar dados da clínica")),
+                        if (!clinic.isClaimed)
+                          const PopupMenuItem(
+                            value: "claim",
+                            child: Text("Sou responsável por esta clínica")
+                          )
+                      ]
+                    )
+                  ]
                 ]
               )
             )
@@ -318,64 +320,59 @@ class _ListingDetailsPageState extends ConsumerState<ListingDetailsPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.fromLTRB(20, 14, 20, 14),
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: [
-                        AppColors.primary.withValues(alpha: 0.09),
-                        AppColors.background
-                      ]
-                    ),
-                    border: Border(
-                      bottom: BorderSide(color: AppColors.primary.withValues(alpha: 0.07))
-                    )
-                  ),
+                ColoredBox(
+                  color: AppColors.card,
                   child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      Text(
-                        clinic.name,
-                        style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                              fontWeight: FontWeight.w900,
-                              letterSpacing: -0.45,
-                              height: 1.15,
-                              fontSize: 24,
-                              color: AppColors.textPrimary
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(20, 12, 20, 18),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              clinic.name,
+                              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                                    fontWeight: FontWeight.w700,
+                                    letterSpacing: -0.35,
+                                    height: 1.28,
+                                    fontSize: 22,
+                                    color: AppColors.textPrimary
+                                  )
+                            ),
+                            const SizedBox(height: 14),
+                            Wrap(
+                              spacing: 8,
+                              runSpacing: 8,
+                              children: [
+                                if (clinic.isVerified)
+                                  const AppBadge(
+                                    label: "Verificado",
+                                    icon: LucideIcons.badgeCheck,
+                                    variant: AppBadgeVariant.verified
+                                  ),
+                                if (clinic.isClaimed)
+                                  const AppBadge(
+                                    label: "Reivindicado",
+                                    icon: LucideIcons.badge,
+                                    variant: AppBadgeVariant.claimed
+                                  ),
+                                if (clinic.addedByCommunity)
+                                  const AppBadge(
+                                    label: "Comunidade",
+                                    icon: LucideIcons.users,
+                                    variant: AppBadgeVariant.community
+                                  )
+                              ]
                             )
+                          ]
+                        )
                       ),
-                      const SizedBox(height: 16),
-                      Wrap(
-                        spacing: 8,
-                        runSpacing: 8,
-                        children: [
-                          if (clinic.isVerified)
-                            const AppBadge(
-                              label: "Verificado",
-                              icon: LucideIcons.badgeCheck,
-                              variant: AppBadgeVariant.verified
-                            ),
-                          if (clinic.isClaimed)
-                            const AppBadge(
-                              label: "Reivindicado",
-                              icon: LucideIcons.badge,
-                              variant: AppBadgeVariant.claimed
-                            ),
-                          if (clinic.addedByCommunity)
-                            const AppBadge(
-                              label: "Comunidade",
-                              icon: LucideIcons.users,
-                              variant: AppBadgeVariant.community
-                            )
-                        ]
-                      )
+                      const Divider(height: 1, thickness: 1, color: AppColors.divider),
                     ]
                   )
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 16),
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 20),
                   child: Column(
@@ -386,77 +383,106 @@ class _ListingDetailsPageState extends ConsumerState<ListingDetailsPage> {
                           final main = s.averageRating;
                           return Container(
                             decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(AppDim.radiusCard),
-                              color: AppColors.primary.withValues(alpha: 0.045),
-                              border: Border.all(
-                                color: AppColors.primary.withValues(alpha: 0.28),
-                                width: 1.5
-                              ),
+                              color: AppColors.card,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: AppColors.divider, width: 1),
                               boxShadow: [
                                 BoxShadow(
-                                  color: AppColors.primary.withValues(alpha: 0.07),
-                                  blurRadius: 18,
-                                  offset: const Offset(0, 6)
-                                ),
-                                BoxShadow(
-                                  color: AppColors.shadow,
+                                  color: Colors.black.withValues(alpha: 0.05),
                                   blurRadius: 10,
-                                  offset: const Offset(0, 3)
+                                  offset: const Offset(0, 2)
                                 )
                               ]
                             ),
+                            clipBehavior: Clip.antiAlias,
                             child: Material(
                               color: Colors.transparent,
-                              borderRadius: BorderRadius.circular(AppDim.radiusCard),
                               child: InkWell(
-                                borderRadius: BorderRadius.circular(AppDim.radiusCard),
                                 onTap: () => context.push(
                                   "/listing/$listingId/reviews?name=${Uri.encodeComponent(clinic.name)}"
                                 ),
                                 child: Padding(
-                                  padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 18),
+                                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
                                   child: Row(
                                     children: [
                                       if (main != null) ...[
-                                        Text(
-                                          main.toStringAsFixed(1),
-                                          style: Theme.of(context).textTheme.displaySmall?.copyWith(
-                                                fontSize: 44,
-                                                fontWeight: FontWeight.w900,
-                                                height: 1,
-                                                color: AppColors.primary,
-                                                letterSpacing: -1
-                                              )
+                                        Container(
+                                          width: 56,
+                                          height: 56,
+                                          decoration: BoxDecoration(
+                                            color: AppColors.primary.withValues(alpha: 0.08),
+                                            borderRadius: BorderRadius.circular(14)
+                                          ),
+                                          alignment: Alignment.center,
+                                          child: Text(
+                                            main.toStringAsFixed(1),
+                                            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                                                  fontWeight: FontWeight.w800,
+                                                  height: 1,
+                                                  color: AppColors.primary,
+                                                  letterSpacing: -0.5
+                                                )
+                                          )
                                         ),
                                         const SizedBox(width: 14),
                                         Expanded(
                                           child: Column(
                                             crossAxisAlignment: CrossAxisAlignment.start,
                                             children: [
-                                              AppRatingStars(value: main, size: 28),
-                                              const SizedBox(height: 8),
+                                              AppRatingStars(value: main, size: 22),
+                                              const SizedBox(height: 6),
                                               Text(
                                                 _reviewCountLabel(s.reviewCount),
-                                                style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                                                      color: AppColors.textPrimary.withValues(alpha: 0.72),
-                                                      fontWeight: FontWeight.w600,
-                                                      letterSpacing: 0.15
+                                                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                                      color: AppColors.textSecondary,
+                                                      fontWeight: FontWeight.w500,
+                                                      height: 1.25
                                                     )
                                               )
                                             ]
                                           )
                                         ),
-                                        const LIcon(LucideIcons.chevronRight, color: AppColors.textSecondary)
+                                        const LIcon(LucideIcons.chevronRight, size: 20, color: AppColors.neutral)
                                       ] else ...[
-                                        const LIcon(LucideIcons.starOff, size: 40, color: AppColors.neutral),
-                                        const SizedBox(width: 12),
-                                        Expanded(
-                                          child: Text(
-                                            "Sem avaliações publicadas ainda",
-                                            style: Theme.of(context).textTheme.bodyLarge
+                                        Container(
+                                          width: 44,
+                                          height: 44,
+                                          decoration: BoxDecoration(
+                                            color: AppColors.neutralBadgeBg,
+                                            borderRadius: BorderRadius.circular(12)
+                                          ),
+                                          alignment: Alignment.center,
+                                          child: const LIcon(
+                                            LucideIcons.starOff,
+                                            size: 22,
+                                            color: AppColors.textSecondary
                                           )
                                         ),
-                                        const LIcon(LucideIcons.chevronRight, color: AppColors.textSecondary)
+                                        const SizedBox(width: 12),
+                                        Expanded(
+                                          child: Column(
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                "Sem avaliações na comunidade",
+                                                style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                                                      fontWeight: FontWeight.w600,
+                                                      color: AppColors.textPrimary,
+                                                      height: 1.2
+                                                    )
+                                              ),
+                                              const SizedBox(height: 4),
+                                              Text(
+                                                "Seja o primeiro a avaliar esta clínica.",
+                                                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                                      color: AppColors.textSecondary,
+                                                      height: 1.3
+                                                    )
+                                              )
+                                            ]
+                                          )
+                                        ),
+                                        const LIcon(LucideIcons.chevronRight, size: 20, color: AppColors.neutral)
                                       ]
                                     ]
                                   )
@@ -471,12 +497,13 @@ class _ListingDetailsPageState extends ConsumerState<ListingDetailsPage> {
                           style: Theme.of(context).textTheme.bodyLarge
                         )
                       ),
-                      const SizedBox(height: 10),
+                      const SizedBox(height: 8),
                       Text(
-                        "Toque para ver avaliações ou deixar a sua.",
+                        "Toque para ver ou enviar uma avaliação.",
+                        textAlign: TextAlign.center,
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: AppColors.textSecondary,
-                              height: 1.4
+                              color: AppColors.textSecondary.withValues(alpha: 0.95),
+                              height: 1.35
                             )
                       ),
                       const SizedBox(height: AppDim.space3),

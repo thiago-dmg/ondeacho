@@ -100,6 +100,8 @@ Esse script **não** executa `seed.sql`; só importa/atualiza clínicas e profis
 
 Exponha `https` na porta 443 e faça proxy para `http://127.0.0.1:3000` (ou a porta configurada). Garanta que `CORS_ORIGINS` inclua a origem do front/admin.
 
+Domínios de referência: `ondeachotea.com` (site público), `api.ondeachotea.com` (API), `admin.ondeachotea.com` (painel). Detalhes e DNS: [ambiente-ondeachotea.md](./ambiente-ondeachotea.md).
+
 ## Painel admin (Next.js)
 
 O admin usa **`NEXT_PUBLIC_API_URL`** (URL completa com `/api/v1`). O repositório inclui `apps/admin/.env.production` apontando para a API na VPS; em desenvolvimento local, crie `apps/admin/.env.local` com `http://localhost:3000/api/v1` (ou o IP da API). As chamadas HTTP ficam em `apps/admin/src/services/api.ts` (sem localhost fixo no código além do fallback de produção).

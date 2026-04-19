@@ -1,4 +1,4 @@
-import { Controller, Get, Param, Query } from "@nestjs/common";
+import { Controller, Get, Headers, Param, Query } from "@nestjs/common";
 import { ApiTags } from "@nestjs/swagger";
 import { ListingsService } from "./listings.service";
 import { ListingsFilterDto } from "./dto/listings-filter.dto";
@@ -13,8 +13,9 @@ export class ListingsController {
     return this.listingsService.findAll(query);
   }
 
+  /** `Authorization: Bearer` opcional: quando válido, inclui `viewerIsOwner` para a UI permitir edição só ao proprietário. */
   @Get(":id")
-  findOne(@Param("id") id: string) {
-    return this.listingsService.findOne(id);
+  findOne(@Param("id") id: string, @Headers("authorization") authorization?: string) {
+    return this.listingsService.findOne(id, authorization);
   }
 }

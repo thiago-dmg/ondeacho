@@ -4,8 +4,10 @@ Plataforma para conectar famílias a clínicas e profissionais especializados em
 
 ## Estrutura
 - `apps/backend`: API NestJS
-- `apps/admin`: painel administrativo Next.js
+- `apps/admin`: painel administrativo Next.js (`admin.ondeachotea.com`)
+- `apps/web`: site público Next.js (`ondeachotea.com`)
 - `apps/mobile`: aplicativo Flutter
+- `docs/ambiente-ondeachotea.md`: domínios, DNS e variáveis de ambiente
 - `docs/plano-produto-ondeacho.md`: arquitetura e roadmap
 - `docs/RUNBOOK.md`: operação (dev/hml/prod)
 - `docs/checklist-homologacao.md`: checklist de validação
@@ -38,8 +40,9 @@ Isso cria `apps/backend/.env` a partir do exemplo, sobe só o serviço `db`, apl
 ```bash
 npm run dev:backend
 npm run dev:admin
+npm run dev:web
 ```
-O admin em `next dev` usa `apps/admin/.env.development` e aponta para `http://127.0.0.1:3000/api/v1`.
+O admin em `next dev` usa `apps/admin/.env.development` e aponta para `http://127.0.0.1:3000/api/v1`. O site público (`dev:web`) usa a porta **3002** e `apps/web/.env.development` — inclua `http://localhost:3002` em `CORS_ORIGINS` no backend (ver `apps/backend/.env.example`).
 
 ## Rodar sem Docker (Postgres já instalado)
 1. Copie `apps/backend/.env.example` para `apps/backend/.env` e ajuste `DB_*`.
