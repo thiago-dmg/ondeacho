@@ -4,7 +4,7 @@ Aplicativo mobile para Android/iOS com foco em descoberta de clinicas e profissi
 
 ## API (base URL)
 
-O padrão compilado aponta para a API em produção na VPS (`http://72.61.35.190:3000/api/v1`).  
+O padrão compilado aponta para **`https://api.ondeachotea.com/api/v1`** (ver `lib/core/network/api_client.dart`).  
 Para desenvolver contra o backend na máquina local:
 
 - **Android (emulador):** `flutter run --dart-define=API_BASE_URL=http://10.0.2.2:3000/api/v1`

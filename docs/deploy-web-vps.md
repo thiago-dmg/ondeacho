@@ -10,7 +10,7 @@ Mesma ideia do [deploy do admin](./deploy-admin-vps.md): Next.js em **localhost:
 4. **systemd** a servir `next start -p 3002` a partir da pasta `current` (ou deploy manual equivalente).
 5. **Nginx** com `server_name ondeachotea.com www.ondeachotea.com` e `proxy_pass http://127.0.0.1:3002`.
 
-Mais contexto de DNS e variáveis: [ambiente-ondeachotea.md](./ambiente-ondeachotea.md).
+Mais contexto de DNS, CORS e exemplo Nginx (site + **api** + admin): [ambiente-ondeachotea.md](./ambiente-ondeachotea.md) e [nginx-ondeachotea-exemplo.conf](./nginx-ondeachotea-exemplo.conf).
 
 ## Build de produção (na VPS ou na tua máquina antes de enviar o pacote)
 

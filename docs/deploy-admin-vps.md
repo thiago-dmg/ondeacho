@@ -6,9 +6,9 @@ O job **deploy-admin** do workflow único `.github/workflows/ci-deploy.yml` publ
 
 1. **Secrets** (já usados pelo deploy da API): `VPS_SSH_HOST`, `VPS_SSH_USER`, `VPS_SSH_KEY`.
 
-2. **`NEXT_PUBLIC_API_URL` (opcional)** — por defeito o admin usa **`/api/v1`** na mesma origem; o **Next faz proxy** para `http://127.0.0.1:3000` (veja `rewrites` em `apps/admin/next.config.js`). Assim **não depende de CORS** no browser.
+2. **`NEXT_PUBLIC_API_URL`** — em produção com domínios separados (recomendado), defina **`https://api.ondeachotea.com/api/v1`** no **build** (ficheiro `apps/admin/.env.production` ou secret `NEXT_PUBLIC_API_URL` no GitHub). O browser chama a API diretamente; configure **`CORS_ORIGINS`** no Nest com **`https://admin.ondeachotea.com`**.
 
-   Só precisa de variável/secret se a API estiver **noutro host** (ex.: `https://api.seudominio.com/api/v1`). Aí configure **também** `CORS_ORIGINS` na API com a origem do painel.
+   O modo **proxy** do Next (`/api/v1` → `127.0.0.1:3000` sem variável) só faz sentido quando o admin e a API partilham a **mesma origem** no browser; com **`https://admin...`** e **`https://api...`** use sempre a URL absoluta da API.
 
 ## Login admin em produção
 
@@ -42,17 +42,17 @@ O admin escuta na **3001**. No painel da **Hostinger → Firewall da VPS**, tens
 
 Para produção é melhor **Nginx na 80/443** a fazer proxy para `http://127.0.0.1:3001` e **não** expor a 3001 na internet.
 
-## Nginx (exemplo)
+## Nginx (exemplo — `admin.ondeachotea.com`)
 
-Substitua `admin.seudominio.com` e o caminho do certificado.
+Use o mesmo IP da VPS; certificado TLS para o host `admin`. Exemplo alinhado ao site e à API: [`nginx-ondeachotea-exemplo.conf`](./nginx-ondeachotea-exemplo.conf).
 
 ```nginx
 server {
   listen 443 ssl http2;
-  server_name admin.seudominio.com;
+  server_name admin.ondeachotea.com;
 
-  ssl_certificate     /etc/letsencrypt/live/admin.seudominio.com/fullchain.pem;
-  ssl_certificate_key /etc/letsencrypt/live/admin.seudominio.com/privkey.pem;
+  ssl_certificate     /etc/letsencrypt/live/admin.ondeachotea.com/fullchain.pem;
+  ssl_certificate_key /etc/letsencrypt/live/admin.ondeachotea.com/privkey.pem;
 
   location / {
     proxy_pass http://127.0.0.1:3001;
