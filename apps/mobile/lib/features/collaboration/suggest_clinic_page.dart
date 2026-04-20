@@ -227,7 +227,7 @@ class _SuggestClinicPageState extends ConsumerState<SuggestClinicPage> {
           children: items
               .map(
                 (e) => FilterChip(
-                  label: Text(e.value),
+                  label: Text(e.value, maxLines: 2, overflow: TextOverflow.ellipsis),
                   selected: selected.contains(e.key),
                   onSelected: (v) => onToggle(e.key, v)
                 )
@@ -283,7 +283,7 @@ class _SuggestClinicPageState extends ConsumerState<SuggestClinicPage> {
                   const SizedBox(height: 8),
                   Text(
                     _isProf
-                        ? "Sugestão rápida: escolha especialidades e convênios nas listas. Telefone e morada da clínica só aparecem se indicar «Outros» na clínica."
+                        ? "Primeiro marque as áreas e convênios do profissional; depois indique a clínica. Morada/telefone da clínica só em «Outros»."
                         : "Cada sugestão passa por revisão. Use as listas quando possível — fica alinhado à busca do app.",
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                           color: AppColors.textSecondary,
@@ -301,6 +301,7 @@ class _SuggestClinicPageState extends ConsumerState<SuggestClinicPage> {
             DropdownButtonFormField<String>(
               key: ValueKey<String>("suggest-target-$_targetType"),
               initialValue: _targetType,
+              isExpanded: true,
               decoration: const InputDecoration(labelText: "Tipo"),
               items: const [
                 DropdownMenuItem(value: "clinica", child: Text("Clínica")),
@@ -309,6 +310,12 @@ class _SuggestClinicPageState extends ConsumerState<SuggestClinicPage> {
               onChanged: (value) {
                 final next = value ?? "clinica";
                 setState(() {
+                  if (next != _targetType) {
+                    _selectedSpecialtyIds.clear();
+                    _selectedInsuranceIds.clear();
+                    _specialtyOtherController.clear();
+                    _insuranceOtherController.clear();
+                  }
                   _targetType = next;
                   if (next == "clinica") {
                     _linkedClinicValue = "";
@@ -336,11 +343,59 @@ class _SuggestClinicPageState extends ConsumerState<SuggestClinicPage> {
                   hintText: "Ex.: CRM-SP 123456"
                 ),
                 maxLength: 80
-              ),
-              const SizedBox(height: AppDim.space2),
+              )
+            ],
+            const SizedBox(height: AppDim.space3),
+            AppSectionHeader(
+              title: "Especialidades",
+              subtitle: _isProf
+                  ? "Áreas em que o profissional atua (mesmo catálogo da busca). Toque para marcar; «Outros» abre texto."
+                  : "Áreas da clínica (mesmo catálogo da busca). Toque para marcar; «Outros» abre texto."
+            ),
+            _chipGrid(
+              async: specialtiesAsync,
+              selected: _selectedSpecialtyIds,
+              onToggle: (id, sel) => _toggleId(_selectedSpecialtyIds, id, sel, isSpecialty: true)
+            ),
+            if (_selectedSpecialtyIds.contains(_kOther)) ...[
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: _specialtyOtherController,
+                decoration: const InputDecoration(
+                  labelText: "Descreva as especialidades (Outros)",
+                  hintText: "Ex.: Musicoterapia"
+                ),
+                maxLines: 2
+              )
+            ],
+            const SizedBox(height: AppDim.space3),
+            AppSectionHeader(
+              title: "Convênios",
+              subtitle: _isProf
+                  ? "Planos em que o profissional atende. Lista + Outros."
+                  : "Planos aceitos pela clínica. Lista + Outros."
+            ),
+            _chipGrid(
+              async: insurancesAsync,
+              selected: _selectedInsuranceIds,
+              onToggle: (id, sel) => _toggleId(_selectedInsuranceIds, id, sel, isSpecialty: false)
+            ),
+            if (_selectedInsuranceIds.contains(_kOther)) ...[
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: _insuranceOtherController,
+                decoration: const InputDecoration(
+                  labelText: "Descreva os convênios (Outros)",
+                  hintText: "Ex.: Plano municipal X"
+                ),
+                maxLines: 2
+              )
+            ],
+            if (_isProf) ...[
+              const SizedBox(height: AppDim.space3),
               const AppSectionHeader(
                 title: "Clínica onde atende",
-                subtitle: "Escolha na lista, não informar, ou «Outros» para uma clínica ainda não cadastrada."
+                subtitle: "Depois das áreas de atuação: escolha na lista, não informar, ou «Outros»."
               ),
               clinicsAsync.when(
                 loading: () => const LinearProgressIndicator(),
@@ -349,13 +404,23 @@ class _SuggestClinicPageState extends ConsumerState<SuggestClinicPage> {
                   return DropdownButtonFormField<String>(
                     key: ValueKey<String>("suggest-clinic-${clinics.length}-$_linkedClinicValue"),
                     initialValue: _linkedClinicValue,
+                    isExpanded: true,
                     decoration: const InputDecoration(labelText: "Clínica"),
                     items: [
-                      const DropdownMenuItem(value: "", child: Text("— Não informar —")),
-                      ...clinics.map(
-                        (c) => DropdownMenuItem(value: c.id, child: Text(c.label, overflow: TextOverflow.ellipsis))
+                      const DropdownMenuItem(
+                        value: "",
+                        child: Text("— Não informar —", overflow: TextOverflow.ellipsis)
                       ),
-                      const DropdownMenuItem(value: _kOther, child: Text("Outros (nova / não listada)"))
+                      ...clinics.map(
+                        (c) => DropdownMenuItem(
+                          value: c.id,
+                          child: Text(c.label, maxLines: 1, overflow: TextOverflow.ellipsis)
+                        )
+                      ),
+                      const DropdownMenuItem(
+                        value: _kOther,
+                        child: Text("Outros (nova / não listada)", overflow: TextOverflow.ellipsis)
+                      )
                     ],
                     onChanged: (v) => setState(() => _linkedClinicValue = v ?? "")
                   );
@@ -405,48 +470,6 @@ class _SuggestClinicPageState extends ConsumerState<SuggestClinicPage> {
                   decoration: const InputDecoration(labelText: "WhatsApp da clínica (opcional)")
                 )
               ]
-            ],
-            const SizedBox(height: AppDim.space3),
-            const AppSectionHeader(
-              title: "Especialidades",
-              subtitle: "Toque para marcar; «Outros» abre campo de texto."
-            ),
-            _chipGrid(
-              async: specialtiesAsync,
-              selected: _selectedSpecialtyIds,
-              onToggle: (id, sel) => _toggleId(_selectedSpecialtyIds, id, sel, isSpecialty: true)
-            ),
-            if (_selectedSpecialtyIds.contains(_kOther)) ...[
-              const SizedBox(height: 12),
-              TextFormField(
-                controller: _specialtyOtherController,
-                decoration: const InputDecoration(
-                  labelText: "Descreva as especialidades (Outros)",
-                  hintText: "Ex.: Musicoterapia"
-                ),
-                maxLines: 2
-              )
-            ],
-            const SizedBox(height: AppDim.space3),
-            const AppSectionHeader(
-              title: "Convênios",
-              subtitle: "Mesmo esquema: lista + Outros."
-            ),
-            _chipGrid(
-              async: insurancesAsync,
-              selected: _selectedInsuranceIds,
-              onToggle: (id, sel) => _toggleId(_selectedInsuranceIds, id, sel, isSpecialty: false)
-            ),
-            if (_selectedInsuranceIds.contains(_kOther)) ...[
-              const SizedBox(height: 12),
-              TextFormField(
-                controller: _insuranceOtherController,
-                decoration: const InputDecoration(
-                  labelText: "Descreva os convênios (Outros)",
-                  hintText: "Ex.: Plano municipal X"
-                ),
-                maxLines: 2
-              )
             ],
             const SizedBox(height: AppDim.space3),
             AppSectionHeader(
