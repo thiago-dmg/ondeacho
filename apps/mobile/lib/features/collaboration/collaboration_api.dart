@@ -13,31 +13,53 @@ class CollaborationApi {
     required String city,
     String? neighborhood,
     String? addressLine,
+    String? linkedClinicId,
     String? linkedClinicName,
     String? professionalCrm,
     String? phone,
     String? whatsappPhone,
-    List<String>? specialtyNames,
-    List<String>? insuranceNames,
+    List<String> specialtyIds = const [],
+    String? specialtyOther,
+    List<String> insuranceIds = const [],
+    String? insuranceOther,
     String? observations
   }) async {
     final data = <String, dynamic>{
       "targetType": targetType,
       "name": name,
       "city": city,
-      "neighborhood": neighborhood,
-      "addressLine": addressLine,
-      "phone": phone,
-      "whatsappPhone": whatsappPhone,
-      "specialtyNames": specialtyNames ?? [],
-      "insuranceNames": insuranceNames ?? [],
-      "observations": observations
+      "specialtyIds": specialtyIds,
+      "insuranceIds": insuranceIds
     };
-    if (linkedClinicName != null) {
+    if (neighborhood != null && neighborhood.isNotEmpty) {
+      data["neighborhood"] = neighborhood;
+    }
+    if (addressLine != null && addressLine.isNotEmpty) {
+      data["addressLine"] = addressLine;
+    }
+    if (phone != null && phone.isNotEmpty) {
+      data["phone"] = phone;
+    }
+    if (whatsappPhone != null && whatsappPhone.isNotEmpty) {
+      data["whatsappPhone"] = whatsappPhone;
+    }
+    if (observations != null && observations.isNotEmpty) {
+      data["observations"] = observations;
+    }
+    if (linkedClinicId != null && linkedClinicId.isNotEmpty) {
+      data["linkedClinicId"] = linkedClinicId;
+    }
+    if (linkedClinicName != null && linkedClinicName.isNotEmpty) {
       data["linkedClinicName"] = linkedClinicName;
     }
-    if (professionalCrm != null) {
+    if (professionalCrm != null && professionalCrm.isNotEmpty) {
       data["professionalCrm"] = professionalCrm;
+    }
+    if (specialtyOther != null && specialtyOther.isNotEmpty) {
+      data["specialtyOther"] = specialtyOther;
+    }
+    if (insuranceOther != null && insuranceOther.isNotEmpty) {
+      data["insuranceOther"] = insuranceOther;
     }
     await _dio.post("/clinic-suggestions", data: data);
   }

@@ -147,7 +147,7 @@ export class AdminClinicSuggestionsService {
     );
   }
 
-  /** IDs finais (catálogo existente + criados a partir de «Outros»). */
+  /** IDs finais (catálogo existente + criados a partir de «Outros» + nomes legados do array). */
   private async collectSpecialtyIdsFromSuggestion(suggestion: ClinicSuggestionEntity): Promise<string[]> {
     const ids = new Set<string>();
     if (suggestion.specialtyIds?.length) {
@@ -160,6 +160,12 @@ export class AdminClinicSuggestionsService {
       }
     }
     for (const piece of splitCommaList(suggestion.specialtyOther)) {
+      const ent = await this.findOrCreateSpecialtyByName(piece);
+      ids.add(ent.id);
+    }
+    for (const raw of suggestion.specialtyNames ?? []) {
+      const piece = raw?.trim();
+      if (!piece) continue;
       const ent = await this.findOrCreateSpecialtyByName(piece);
       ids.add(ent.id);
     }
@@ -178,6 +184,12 @@ export class AdminClinicSuggestionsService {
       }
     }
     for (const piece of splitCommaList(suggestion.insuranceOther)) {
+      const ent = await this.findOrCreateInsuranceByName(piece);
+      ids.add(ent.id);
+    }
+    for (const raw of suggestion.insuranceNames ?? []) {
+      const piece = raw?.trim();
+      if (!piece) continue;
       const ent = await this.findOrCreateInsuranceByName(piece);
       ids.add(ent.id);
     }

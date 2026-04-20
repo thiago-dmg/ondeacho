@@ -18,6 +18,36 @@ class CatalogOption {
   }
 }
 
+/// Clínica na lista pública (ex.: sugerir profissional — vínculo ou «Outros»).
+class ClinicPick {
+  final String id;
+  final String name;
+  final String city;
+
+  const ClinicPick({required this.id, required this.name, required this.city});
+
+  String get label => city.trim().isEmpty ? name : "$name — $city";
+}
+
+final clinicSuggestListProvider = FutureProvider.autoDispose<List<ClinicPick>>((ref) async {
+  final dio = ref.watch(dioProvider);
+  final response = await dio.get<List<dynamic>>("/listings");
+  final raw = response.data ?? [];
+  final list = raw
+      .whereType<Map<String, dynamic>>()
+      .map(
+        (e) => ClinicPick(
+          id: e["id"]?.toString() ?? "",
+          name: e["name"]?.toString() ?? "",
+          city: e["city"]?.toString() ?? ""
+        )
+      )
+      .where((c) => c.id.isNotEmpty)
+      .toList();
+  list.sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+  return list;
+});
+
 class SelectedSpecialtyNotifier extends Notifier<String?> {
   @override
   String? build() => null;

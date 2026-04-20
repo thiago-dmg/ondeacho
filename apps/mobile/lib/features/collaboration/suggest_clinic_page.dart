@@ -7,7 +7,10 @@ import "../../core/widgets/lucide_icon.dart";
 import "../../core/theme/app_dimensions.dart";
 import "../../core/widgets/app_section_header.dart";
 import "../auth/auth_state.dart";
+import "../discovery/discovery_provider.dart";
 import "collaboration_api.dart";
+
+const String _kOther = "__other__";
 
 class SuggestClinicPage extends ConsumerStatefulWidget {
   const SuggestClinicPage({super.key});
@@ -20,40 +23,66 @@ class _SuggestClinicPageState extends ConsumerState<SuggestClinicPage> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final _crmController = TextEditingController();
-  final _linkedClinicController = TextEditingController();
   final _cityController = TextEditingController();
   final _neighborhoodController = TextEditingController();
   final _addressController = TextEditingController();
   final _phoneController = TextEditingController();
   final _whatsappController = TextEditingController();
-  final _specialtiesController = TextEditingController();
-  final _insurancesController = TextEditingController();
+  final _specialtyOtherController = TextEditingController();
+  final _insuranceOtherController = TextEditingController();
   final _observationsController = TextEditingController();
+  final _draftClinicNameController = TextEditingController();
+  final _draftClinicCityController = TextEditingController();
+  final _draftClinicNeighborhoodController = TextEditingController();
+  final _draftClinicAddressController = TextEditingController();
+  final _draftClinicPhoneController = TextEditingController();
+  final _draftClinicWhatsappController = TextEditingController();
+
   String _targetType = "clinica";
   bool _loading = false;
+  final List<String> _selectedSpecialtyIds = [];
+  final List<String> _selectedInsuranceIds = [];
+  String _linkedClinicValue = "";
+
+  bool get _isProf => _targetType == "profissional";
+  bool get _linkedClinicOtherOn => _isProf && _linkedClinicValue == _kOther;
 
   @override
   void dispose() {
     _nameController.dispose();
     _crmController.dispose();
-    _linkedClinicController.dispose();
     _cityController.dispose();
     _neighborhoodController.dispose();
     _addressController.dispose();
     _phoneController.dispose();
     _whatsappController.dispose();
-    _specialtiesController.dispose();
-    _insurancesController.dispose();
+    _specialtyOtherController.dispose();
+    _insuranceOtherController.dispose();
     _observationsController.dispose();
+    _draftClinicNameController.dispose();
+    _draftClinicCityController.dispose();
+    _draftClinicNeighborhoodController.dispose();
+    _draftClinicAddressController.dispose();
+    _draftClinicPhoneController.dispose();
+    _draftClinicWhatsappController.dispose();
     super.dispose();
   }
 
-  List<String> _parseList(String value) {
-    return value
-        .split(",")
-        .map((item) => item.trim())
-        .where((item) => item.isNotEmpty)
-        .toList();
+  void _toggleId(List<String> ids, String id, bool selected, {required bool isSpecialty}) {
+    setState(() {
+      if (selected) {
+        if (!ids.contains(id)) ids.add(id);
+      } else {
+        ids.remove(id);
+        if (id == _kOther) {
+          if (isSpecialty) {
+            _specialtyOtherController.clear();
+          } else {
+            _insuranceOtherController.clear();
+          }
+        }
+      }
+    });
   }
 
   Future<void> _submit() async {
@@ -65,33 +94,103 @@ class _SuggestClinicPageState extends ConsumerState<SuggestClinicPage> {
       return;
     }
 
-    final isProf = _targetType == "profissional";
-    final addressLine =
-        _addressController.text.trim().isEmpty ? null : _addressController.text.trim();
+    final specOtherOn = _selectedSpecialtyIds.contains(_kOther);
+    final insOtherOn = _selectedInsuranceIds.contains(_kOther);
+    if (specOtherOn && _specialtyOtherController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Descreva as especialidades em «Outros» ou desmarque a opção."))
+      );
+      return;
+    }
+    if (insOtherOn && _insuranceOtherController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Descreva os convênios em «Outros» ou desmarque a opção."))
+      );
+      return;
+    }
+
+    if (_isProf && _linkedClinicOtherOn) {
+      if (_draftClinicNameController.text.trim().isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Indique o nome da clínica.")));
+        return;
+      }
+      if (_draftClinicCityController.text.trim().isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Indique a cidade da clínica.")));
+        return;
+      }
+    }
+    if (_isProf && !_linkedClinicOtherOn && _cityController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Indique a cidade.")));
+      return;
+    }
+
+    final specIds = _selectedSpecialtyIds.where((id) => id != _kOther).toList();
+    final insIds = _selectedInsuranceIds.where((id) => id != _kOther).toList();
 
     setState(() => _loading = true);
     try {
+      final linkedOther = _linkedClinicOtherOn;
+      final cityOut =
+          _isProf && linkedOther ? _draftClinicCityController.text.trim() : _cityController.text.trim();
+
+      String? neighborhoodOut;
+      String? addressOut;
+      String? phoneOut;
+      String? whatsOut;
+      String? obsOut;
+
+      if (_isProf) {
+        if (linkedOther) {
+          neighborhoodOut = _draftClinicNeighborhoodController.text.trim().isEmpty
+              ? null
+              : _draftClinicNeighborhoodController.text.trim();
+          addressOut = _draftClinicAddressController.text.trim().isEmpty
+              ? null
+              : _draftClinicAddressController.text.trim();
+          phoneOut = _draftClinicPhoneController.text.trim().isEmpty ? null : _draftClinicPhoneController.text.trim();
+          whatsOut =
+              _draftClinicWhatsappController.text.trim().isEmpty ? null : _draftClinicWhatsappController.text.trim();
+        }
+      } else {
+        neighborhoodOut =
+            _neighborhoodController.text.trim().isEmpty ? null : _neighborhoodController.text.trim();
+        addressOut = _addressController.text.trim().isEmpty ? null : _addressController.text.trim();
+        phoneOut = _phoneController.text.trim().isEmpty ? null : _phoneController.text.trim();
+        whatsOut = _whatsappController.text.trim().isEmpty ? null : _whatsappController.text.trim();
+        obsOut = _observationsController.text.trim().isEmpty ? null : _observationsController.text.trim();
+      }
+
+      String? linkedId;
+      String? linkedName;
+      if (_isProf) {
+        if (_linkedClinicValue.isNotEmpty && _linkedClinicValue != _kOther) {
+          linkedId = _linkedClinicValue;
+        } else if (linkedOther) {
+          linkedName = _draftClinicNameController.text.trim();
+        }
+      }
+
       await ref.read(collaborationApiProvider).suggest(
             targetType: _targetType,
             name: _nameController.text.trim(),
-            city: _cityController.text.trim(),
-            neighborhood: _neighborhoodController.text.trim().isEmpty
-                ? null
-                : _neighborhoodController.text.trim(),
-            addressLine: addressLine,
-            linkedClinicName: isProf && _linkedClinicController.text.trim().isNotEmpty
-                ? _linkedClinicController.text.trim()
-                : null,
-            professionalCrm: isProf && _crmController.text.trim().isNotEmpty ? _crmController.text.trim() : null,
-            phone: _phoneController.text.trim().isEmpty ? null : _phoneController.text.trim(),
-            whatsappPhone: _whatsappController.text.trim().isEmpty ? null : _whatsappController.text.trim(),
-            specialtyNames: _parseList(_specialtiesController.text),
-            insuranceNames: _parseList(_insurancesController.text),
-            observations: _observationsController.text.trim().isEmpty
-                ? null
-                : _observationsController.text.trim()
+            city: cityOut,
+            neighborhood: neighborhoodOut,
+            addressLine: addressOut,
+            linkedClinicId: linkedId,
+            linkedClinicName: linkedName,
+            professionalCrm: _isProf && _crmController.text.trim().isNotEmpty ? _crmController.text.trim() : null,
+            phone: phoneOut,
+            whatsappPhone: whatsOut,
+            specialtyIds: specIds,
+            specialtyOther: specOtherOn ? _specialtyOtherController.text.trim() : null,
+            insuranceIds: insIds,
+            insuranceOther: insOtherOn ? _insuranceOtherController.text.trim() : null,
+            observations: obsOut
           );
       if (!mounted) return;
+      ref.invalidate(specialtiesProvider);
+      ref.invalidate(insurancesProvider);
+      ref.invalidate(clinicSuggestListProvider);
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Sugestão enviada para moderação. Obrigado!"))
       );
@@ -106,8 +205,45 @@ class _SuggestClinicPageState extends ConsumerState<SuggestClinicPage> {
     }
   }
 
+  Widget _chipGrid({
+    required AsyncValue<List<CatalogOption>> async,
+    required List<String> selected,
+    required void Function(String id, bool sel) onToggle
+  }) {
+    return async.when(
+      loading: () => const Padding(
+        padding: EdgeInsets.symmetric(vertical: 12),
+        child: LinearProgressIndicator()
+      ),
+      error: (e, _) => Text("Erro ao carregar: $e", style: TextStyle(color: Theme.of(context).colorScheme.error)),
+      data: (options) {
+        final items = [
+          ...options.map((o) => MapEntry(o.id, o.name)),
+          const MapEntry(_kOther, "Outros")
+        ];
+        return Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: items
+              .map(
+                (e) => FilterChip(
+                  label: Text(e.value),
+                  selected: selected.contains(e.key),
+                  onSelected: (v) => onToggle(e.key, v)
+                )
+              )
+              .toList()
+        );
+      }
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final specialtiesAsync = ref.watch(specialtiesProvider);
+    final insurancesAsync = ref.watch(insurancesProvider);
+    final clinicsAsync = ref.watch(clinicSuggestListProvider);
+
     return Scaffold(
       appBar: AppBar(title: const Text("Sugerir atendimento")),
       body: Form(
@@ -146,7 +282,9 @@ class _SuggestClinicPageState extends ConsumerState<SuggestClinicPage> {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    "Cada sugestão passa por revisão antes de entrar na busca. Quanto mais completo o formulário, mais rápido conseguimos validar.",
+                    _isProf
+                        ? "Sugestão rápida: escolha especialidades e convênios nas listas. Telefone e morada da clínica só aparecem se indicar «Outros» na clínica."
+                        : "Cada sugestão passa por revisão. Use as listas quando possível — fica alinhado à busca do app.",
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                           color: AppColors.textSecondary,
                           height: 1.45
@@ -161,18 +299,27 @@ class _SuggestClinicPageState extends ConsumerState<SuggestClinicPage> {
               subtitle: "Indique se é um local (clínica) ou um profissional."
             ),
             DropdownButtonFormField<String>(
+              key: ValueKey<String>("suggest-target-$_targetType"),
               initialValue: _targetType,
               decoration: const InputDecoration(labelText: "Tipo"),
               items: const [
                 DropdownMenuItem(value: "clinica", child: Text("Clínica")),
                 DropdownMenuItem(value: "profissional", child: Text("Profissional"))
               ],
-              onChanged: (value) => setState(() => _targetType = value ?? "clinica")
+              onChanged: (value) {
+                final next = value ?? "clinica";
+                setState(() {
+                  _targetType = next;
+                  if (next == "clinica") {
+                    _linkedClinicValue = "";
+                  }
+                });
+              }
             ),
             const SizedBox(height: AppDim.space3),
             const AppSectionHeader(
               title: "Dados básicos",
-              subtitle: "Nome e cidade são obrigatórios."
+              subtitle: "Nome obrigatório."
             ),
             TextFormField(
               controller: _nameController,
@@ -180,7 +327,7 @@ class _SuggestClinicPageState extends ConsumerState<SuggestClinicPage> {
               textCapitalization: TextCapitalization.words,
               validator: (value) => (value == null || value.trim().isEmpty) ? "Informe o nome." : null
             ),
-            if (_targetType == "profissional") ...[
+            if (_isProf) ...[
               const SizedBox(height: 12),
               TextFormField(
                 controller: _crmController,
@@ -190,86 +337,182 @@ class _SuggestClinicPageState extends ConsumerState<SuggestClinicPage> {
                 ),
                 maxLength: 80
               ),
+              const SizedBox(height: AppDim.space2),
+              const AppSectionHeader(
+                title: "Clínica onde atende",
+                subtitle: "Escolha na lista, não informar, ou «Outros» para uma clínica ainda não cadastrada."
+              ),
+              clinicsAsync.when(
+                loading: () => const LinearProgressIndicator(),
+                error: (e, _) => Text("Erro ao carregar clínicas: $e"),
+                data: (clinics) {
+                  return DropdownButtonFormField<String>(
+                    key: ValueKey<String>("suggest-clinic-${clinics.length}-$_linkedClinicValue"),
+                    initialValue: _linkedClinicValue,
+                    decoration: const InputDecoration(labelText: "Clínica"),
+                    items: [
+                      const DropdownMenuItem(value: "", child: Text("— Não informar —")),
+                      ...clinics.map(
+                        (c) => DropdownMenuItem(value: c.id, child: Text(c.label, overflow: TextOverflow.ellipsis))
+                      ),
+                      const DropdownMenuItem(value: _kOther, child: Text("Outros (nova / não listada)"))
+                    ],
+                    onChanged: (v) => setState(() => _linkedClinicValue = v ?? "")
+                  );
+                }
+              ),
+              if (_linkedClinicOtherOn) ...[
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: _draftClinicNameController,
+                  decoration: const InputDecoration(labelText: "Nome da clínica"),
+                  textCapitalization: TextCapitalization.words,
+                  validator: (v) =>
+                      _linkedClinicOtherOn && (v == null || v.trim().isEmpty) ? "Obrigatório." : null
+                ),
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: _draftClinicCityController,
+                  decoration: const InputDecoration(labelText: "Cidade da clínica"),
+                  textCapitalization: TextCapitalization.words,
+                  validator: (v) =>
+                      _linkedClinicOtherOn && (v == null || v.trim().isEmpty) ? "Obrigatório." : null
+                ),
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: _draftClinicNeighborhoodController,
+                  decoration: const InputDecoration(labelText: "Bairro da clínica (opcional)")
+                ),
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: _draftClinicAddressController,
+                  decoration: const InputDecoration(
+                    labelText: "Morada da clínica (opcional)",
+                    hintText: "Rua e número"
+                  ),
+                  textCapitalization: TextCapitalization.sentences
+                ),
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: _draftClinicPhoneController,
+                  keyboardType: TextInputType.phone,
+                  decoration: const InputDecoration(labelText: "Telefone da clínica (opcional)")
+                ),
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: _draftClinicWhatsappController,
+                  keyboardType: TextInputType.phone,
+                  decoration: const InputDecoration(labelText: "WhatsApp da clínica (opcional)")
+                )
+              ]
+            ],
+            const SizedBox(height: AppDim.space3),
+            const AppSectionHeader(
+              title: "Especialidades",
+              subtitle: "Toque para marcar; «Outros» abre campo de texto."
+            ),
+            _chipGrid(
+              async: specialtiesAsync,
+              selected: _selectedSpecialtyIds,
+              onToggle: (id, sel) => _toggleId(_selectedSpecialtyIds, id, sel, isSpecialty: true)
+            ),
+            if (_selectedSpecialtyIds.contains(_kOther)) ...[
               const SizedBox(height: 12),
               TextFormField(
-                controller: _linkedClinicController,
+                controller: _specialtyOtherController,
                 decoration: const InputDecoration(
-                  labelText: "Clínica onde atende (opcional)",
-                  hintText: "Nome da clínica, se souber"
+                  labelText: "Descreva as especialidades (Outros)",
+                  hintText: "Ex.: Musicoterapia"
                 ),
-                maxLength: 200
+                maxLines: 2
               )
             ],
             const SizedBox(height: AppDim.space3),
             const AppSectionHeader(
-              title: "Informações médicas",
-              subtitle: "Separe especialidades e convênios por vírgula."
+              title: "Convênios",
+              subtitle: "Mesmo esquema: lista + Outros."
             ),
-            TextFormField(
-              controller: _specialtiesController,
-              decoration: const InputDecoration(
-                labelText: "Especialidades",
-                hintText: "Ex.: Fonoaudiologia, Psicologia infantil"
+            _chipGrid(
+              async: insurancesAsync,
+              selected: _selectedInsuranceIds,
+              onToggle: (id, sel) => _toggleId(_selectedInsuranceIds, id, sel, isSpecialty: false)
+            ),
+            if (_selectedInsuranceIds.contains(_kOther)) ...[
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: _insuranceOtherController,
+                decoration: const InputDecoration(
+                  labelText: "Descreva os convênios (Outros)",
+                  hintText: "Ex.: Plano municipal X"
+                ),
+                maxLines: 2
               )
-            ),
-            const SizedBox(height: 12),
-            TextFormField(
-              controller: _insurancesController,
-              decoration: const InputDecoration(
-                labelText: "Convênios",
-                hintText: "Ex.: Unimed, Bradesco Saúde"
-              )
-            ),
+            ],
             const SizedBox(height: AppDim.space3),
-            const AppSectionHeader(
+            AppSectionHeader(
               title: "Localização",
-              subtitle: "Cidade obrigatória; demais campos opcionais."
+              subtitle: _isProf && !_linkedClinicOtherOn
+                  ? "Cidade do profissional (obrigatória se não usar «Outros» na clínica)."
+                  : _isProf && _linkedClinicOtherOn
+                      ? "A cidade da clínica foi pedida acima."
+                      : "Cidade da clínica e campos opcionais."
             ),
-            TextFormField(
-              controller: _cityController,
-              decoration: const InputDecoration(labelText: "Cidade"),
-              textCapitalization: TextCapitalization.words,
-              validator: (value) => (value == null || value.trim().isEmpty) ? "Informe a cidade." : null
-            ),
-            const SizedBox(height: 12),
-            TextFormField(
-              controller: _neighborhoodController,
-              decoration: const InputDecoration(labelText: "Bairro (opcional)")
-            ),
-            const SizedBox(height: 12),
-            TextFormField(
-              controller: _addressController,
-              decoration: const InputDecoration(
-                labelText: "Endereço (opcional)",
-                hintText: "Rua e número, se quiser"
-              ),
-              textCapitalization: TextCapitalization.sentences
-            ),
-            const SizedBox(height: AppDim.space3),
-            const AppSectionHeader(
-              title: "Contato",
-              subtitle: "Opcional, mas ajuda na verificação."
-            ),
-            TextFormField(
-              controller: _phoneController,
-              keyboardType: TextInputType.phone,
-              decoration: const InputDecoration(labelText: "Telefone")
-            ),
-            const SizedBox(height: 12),
-            TextFormField(
-              controller: _whatsappController,
-              keyboardType: TextInputType.phone,
-              decoration: const InputDecoration(labelText: "WhatsApp")
-            ),
-            const SizedBox(height: AppDim.space3),
-            TextFormField(
-              controller: _observationsController,
-              maxLines: 3,
-              decoration: const InputDecoration(
-                labelText: "Observações",
-                alignLabelWithHint: true
+            if (!_isProf || !_linkedClinicOtherOn) ...[
+              TextFormField(
+                controller: _cityController,
+                decoration: InputDecoration(
+                  labelText: _isProf ? "Cidade" : "Cidade",
+                  hintText: _isProf ? "Onde o profissional atende" : null
+                ),
+                textCapitalization: TextCapitalization.words,
+                validator: (value) {
+                  if (_isProf && _linkedClinicOtherOn) return null;
+                  if (value == null || value.trim().isEmpty) return "Informe a cidade.";
+                  return null;
+                }
               )
-            ),
+            ],
+            if (!_isProf) ...[
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: _neighborhoodController,
+                decoration: const InputDecoration(labelText: "Bairro (opcional)")
+              ),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: _addressController,
+                decoration: const InputDecoration(
+                  labelText: "Morada (opcional)",
+                  hintText: "Rua e número"
+                ),
+                textCapitalization: TextCapitalization.sentences
+              ),
+              const SizedBox(height: AppDim.space3),
+              const AppSectionHeader(
+                title: "Contato",
+                subtitle: "Opcional, mas ajuda na verificação."
+              ),
+              TextFormField(
+                controller: _phoneController,
+                keyboardType: TextInputType.phone,
+                decoration: const InputDecoration(labelText: "Telefone")
+              ),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: _whatsappController,
+                keyboardType: TextInputType.phone,
+                decoration: const InputDecoration(labelText: "WhatsApp")
+              ),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: _observationsController,
+                maxLines: 3,
+                decoration: const InputDecoration(
+                  labelText: "Observações",
+                  alignLabelWithHint: true
+                )
+              )
+            ],
             const SizedBox(height: AppDim.space3),
             FilledButton(
               onPressed: _loading ? null : _submit,
